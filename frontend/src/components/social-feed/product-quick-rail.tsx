@@ -24,9 +24,9 @@ export function ProductQuickRail({
   );
 
   return (
-    <aside className="w-80 border-l border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-[#0D1117]/80 backdrop-blur-md p-4 flex flex-col shrink-0 transition-colors">
+    <aside className="w-80 border-l border-slate-200 dark:border-[#1F2C3F] bg-white dark:bg-[#0E141E] p-4 flex flex-col shrink-0 transition-colors z-10">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-[#1F2C3F]">
         <div className="flex items-center gap-2">
           <ShoppingBag className="w-4 h-4 text-cyan-500" />
           <h2 className="font-bold text-sm text-slate-900 dark:text-white">Store Products</h2>
@@ -45,7 +45,7 @@ export function ProductQuickRail({
           placeholder="Filter products..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161B22] text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-[#1F2C3F] bg-slate-50 dark:bg-[#131B26] text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500"
         />
       </div>
 
@@ -57,10 +57,10 @@ export function ProductQuickRail({
             <div
               key={product.id}
               className={cn(
-                'p-3 rounded-2xl border transition-all duration-200 bg-white dark:bg-[#161B22] group shadow-xs',
+                'p-3 rounded-2xl border transition-all duration-200 bg-white dark:bg-[#131B26] group shadow-xs',
                 isSelected
-                  ? 'border-cyan-500/80 dark:border-cyan-500 ring-1 ring-cyan-500/30 shadow-md shadow-cyan-500/10'
-                  : 'border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+                  ? 'border-cyan-500 dark:border-cyan-500/80 ring-1 ring-cyan-500/30 shadow-md shadow-cyan-500/10'
+                  : 'border-slate-200 dark:border-[#1F2C3F] hover:border-slate-300 dark:hover:border-[#2D3D56]'
               )}
             >
               <div className="flex gap-3">
@@ -72,14 +72,14 @@ export function ProductQuickRail({
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                    <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#1E293B] text-slate-600 dark:text-slate-300">
                       {product.category}
                     </span>
                     <span className="text-xs font-bold text-slate-900 dark:text-white">
                       {product.price}
                     </span>
                   </div>
-                  <h3 className="font-semibold text-xs text-slate-800 dark:text-slate-200 truncate mt-1">
+                  <h3 className="font-semibold text-xs text-slate-800 dark:text-slate-100 truncate mt-1">
                     {product.name}
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
@@ -95,10 +95,10 @@ export function ProductQuickRail({
                   'w-full mt-2.5 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer',
                   isSelected
                     ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-gradient-to-r hover:from-violet-600 hover:to-cyan-600 hover:text-white'
+                    : 'bg-slate-100 dark:bg-[#1A2433] text-slate-700 dark:text-slate-300 hover:bg-gradient-to-r hover:from-violet-600 hover:to-cyan-600 hover:text-white'
                 )}
               >
-                <Sparkles className="w-3 h-3 text-cyan-400" />
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                 <span>{isSelected ? 'Active in Studio' : 'Generate Post for this'}</span>
               </button>
             </div>

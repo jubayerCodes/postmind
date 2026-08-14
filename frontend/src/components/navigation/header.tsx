@@ -1,13 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { Bell, Sparkles, Radio } from 'lucide-react';
+import { Bell, Sparkles } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Header() {
   return (
-    <header className="h-16 border-b border-slate-200 dark:border-slate-800/80 bg-white/70 dark:bg-[#0D1117]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 transition-colors">
-      {/* Left: Breadcrumb / Channel Live Status */}
+    <header className="h-16 border-b border-slate-200 dark:border-[#1F2C3F] bg-white dark:bg-[#0E141E] px-6 flex items-center justify-between shrink-0 transition-colors z-10">
+      {/* Left: Channel Live Status */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
           <span className="relative flex h-2 w-2">
@@ -28,7 +28,7 @@ export function Header() {
 
         {/* Notifications */}
         <button
-          className="relative p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          className="relative p-2.5 rounded-xl border border-slate-200 dark:border-[#1F2C3F] bg-white dark:bg-[#131B26] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1A2433] transition-colors cursor-pointer"
           aria-label="Notifications"
         >
           <Bell className="w-4 h-4" />
@@ -39,7 +39,7 @@ export function Header() {
         <ThemeToggle />
 
         {/* Merchant Avatar */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-[#1F2C3F]">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 p-0.5 shadow-sm">
             <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center text-white font-bold text-xs">
               UW

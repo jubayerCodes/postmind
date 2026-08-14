@@ -30,11 +30,11 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-64 border-r border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-[#0D1117]/95 backdrop-blur-md flex flex-col justify-between p-4 shrink-0 transition-colors z-20">
+    <aside className="w-64 border-r border-slate-200 dark:border-[#1F2C3F] bg-white dark:bg-[#0E141E] flex flex-col justify-between p-4 shrink-0 transition-colors z-20">
       <div>
         {/* 1. Brand Logo Header */}
         <div className="flex items-center gap-3 px-2 py-2 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 text-white shrink-0">
             <Zap className="w-5 h-5 fill-current" />
           </div>
           <div>
@@ -50,9 +50,9 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           </div>
         </div>
 
-        {/* 2. Shop Selector at the bottom of the sidebar logo area */}
+        {/* 2. Shop Selector at bottom of logo area */}
         <div className="mb-5 px-1">
-          <div className="p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/90 dark:bg-[#161B22] hover:bg-slate-100/90 dark:hover:bg-[#1C2129] transition-all duration-300 cursor-pointer group shadow-xs">
+          <div className="p-2.5 rounded-xl border border-slate-200 dark:border-[#1F2C3F] bg-slate-50 dark:bg-[#131B26] hover:bg-slate-100 dark:hover:bg-[#1A2433] transition-all duration-300 cursor-pointer group shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/10 to-cyan-500/10 dark:bg-cyan-500/10 text-violet-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
@@ -74,7 +74,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           </div>
         </div>
 
-        {/* 3. Navigation List with Seamless Floating Active Styles */}
+        {/* 3. Navigation List with Floating Active Styles */}
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -87,7 +87,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                   'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ease-out cursor-pointer text-left group',
                   isActive
                     ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold shadow-lg shadow-violet-500/25 scale-[1.02] translate-x-0.5'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/40 hover:translate-x-0.5'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#131B26] hover:translate-x-0.5'
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -119,7 +119,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                       'text-xs font-mono px-1.5 py-0.5 rounded transition-colors duration-300',
                       isActive
                         ? 'bg-white/20 text-white'
-                        : 'text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/80'
+                        : 'text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-[#131B26]'
                     )}
                   >
                     {item.count}
@@ -132,13 +132,13 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       </div>
 
       {/* Footer Store Plan Status */}
-      <div className="pt-4 border-t border-slate-200 dark:border-slate-800/60 px-1 space-y-2">
-        <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-[#161B22] border border-slate-200/80 dark:border-slate-800">
+      <div className="pt-4 border-t border-slate-200 dark:border-[#1F2C3F] px-1 space-y-2">
+        <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-[#131B26] border border-slate-200 dark:border-[#1F2C3F]">
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span className="font-semibold text-slate-700 dark:text-slate-300">Monthly AI Quota</span>
             <span className="text-cyan-600 dark:text-cyan-400 font-mono font-bold">14 / 50</span>
           </div>
-          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700/60 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-cyan-500 to-violet-500 rounded-full w-[28%]" />
           </div>
         </div>

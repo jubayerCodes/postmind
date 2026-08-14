@@ -52,7 +52,7 @@ export function FloatingQuickActions({
 
   return (
     <div className="sticky bottom-6 z-30 max-w-2xl mx-auto w-full px-4">
-      <div className="p-2.5 rounded-2xl bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 shadow-2xl shadow-slate-900/10 dark:shadow-black/80 flex flex-wrap items-center justify-between gap-2.5 transition-all">
+      <div className="p-2.5 rounded-2xl bg-white/95 dark:bg-[#131B26]/95 backdrop-blur-xl border border-slate-200 dark:border-[#1F2C3F] shadow-2xl shadow-slate-900/10 dark:shadow-black/80 flex flex-wrap items-center justify-between gap-2.5 transition-all">
         {/* Left AI Tone Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">
           <button
@@ -61,7 +61,7 @@ export function FloatingQuickActions({
               'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shrink-0',
               currentTone === 'witty'
                 ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/25'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-[#1A2433] text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-[#2D3D56] hover:bg-slate-200 dark:hover:bg-[#223044]'
             )}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -74,7 +74,7 @@ export function FloatingQuickActions({
               'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shrink-0',
               currentTone === 'promo'
                 ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-md shadow-rose-500/25'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-[#1A2433] text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-[#2D3D56] hover:bg-slate-200 dark:hover:bg-[#223044]'
             )}
           >
             <Tag className="w-3.5 h-3.5 text-rose-400" />
@@ -87,7 +87,7 @@ export function FloatingQuickActions({
               'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shrink-0',
               currentTone === 'storytelling'
                 ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/25'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-[#1A2433] text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-[#2D3D56] hover:bg-slate-200 dark:hover:bg-[#223044]'
             )}
           >
             <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
@@ -98,7 +98,7 @@ export function FloatingQuickActions({
             onClick={() => handleToneChange('natural')}
             className={cn(
               'flex items-center gap-1.5 p-2 rounded-xl text-xs font-medium transition-colors cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white',
-              currentTone === 'natural' && 'font-bold text-cyan-600 dark:text-cyan-400 bg-slate-100 dark:bg-slate-800'
+              currentTone === 'natural' && 'font-bold text-cyan-600 dark:text-cyan-400 bg-slate-100 dark:bg-[#1A2433]'
             )}
             title="Reset to default recommendation"
           >

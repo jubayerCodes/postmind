@@ -12,7 +12,7 @@ import {
   Product,
   SocialPostState,
 } from '@/lib/mock-data';
-import { Sparkles, Calendar, TrendingUp, Zap, Layers } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = React.useState('feed');
@@ -82,9 +82,9 @@ export default function DashboardPage() {
           {/* Center Feed Studio */}
           <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 relative flex flex-col items-center">
             {/* Top AI Insight Banner */}
-            <div className="w-full max-w-xl mb-4 p-3 rounded-2xl bg-gradient-to-r from-violet-600/10 via-cyan-500/10 to-transparent border border-violet-500/20 flex items-center justify-between gap-3 shadow-xs">
+            <div className="w-full max-w-xl mb-4 p-3 rounded-2xl bg-gradient-to-r from-violet-600/10 via-cyan-500/10 to-transparent border border-violet-500/20 dark:border-cyan-500/20 flex items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-violet-600/20 text-violet-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-violet-600/20 dark:bg-cyan-500/20 text-violet-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
                   <Sparkles className="w-4 h-4 text-cyan-500 animate-pulse" />
                 </div>
                 <div>
