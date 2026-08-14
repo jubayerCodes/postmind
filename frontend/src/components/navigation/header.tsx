@@ -1,30 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { Store, CheckCircle2, Bell, ChevronDown, Sparkles } from 'lucide-react';
+import { Bell, Sparkles, Radio } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Header() {
   return (
     <header className="h-16 border-b border-slate-200 dark:border-slate-800/80 bg-white/70 dark:bg-[#0D1117]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 transition-colors">
-      {/* Store Switcher */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#161B22] text-sm font-medium hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer group shadow-xs">
-          <div className="w-6 h-6 rounded-lg bg-violet-600/10 dark:bg-cyan-500/10 text-violet-600 dark:text-cyan-400 flex items-center justify-center">
-            <Store className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-slate-800 dark:text-slate-200 font-semibold">UrbanWear Dhaka</span>
-          <span className="text-xs text-slate-400 font-normal">🇧🇩 BD</span>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform" />
-        </div>
-
-        {/* Connected Social Channel Status */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+      {/* Left: Breadcrumb / Channel Live Status */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          <span>Meta Page Connected</span>
+          <span className="font-semibold">Meta Facebook Page Connected</span>
         </div>
       </div>
 
