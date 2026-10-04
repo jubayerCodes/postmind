@@ -1,149 +1,142 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Sparkles,
-  Tag,
-  RefreshCw,
-  Calendar,
-  Send,
-  BookOpen,
-  Check,
-} from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { Sparkles, Tag, BookOpen, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FloatingQuickActionsProps {
   currentTone: string;
   onSelectTone: (tone: 'natural' | 'witty' | 'promo' | 'storytelling') => void;
-  onSchedule: () => void;
-  onPublish: () => void;
-  isScheduled: boolean;
-  isPublished: boolean;
+  onSchedule?: () => void;
+  onPublish?: () => void;
+  isScheduled?: boolean;
+  isPublished?: boolean;
 }
 
 export function FloatingQuickActions({
   currentTone,
   onSelectTone,
-  onSchedule,
-  onPublish,
-  isScheduled,
-  isPublished,
 }: FloatingQuickActionsProps) {
-  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [loadingTone, setLoadingTone] = React.useState<
+    'witty' | 'promo' | 'storytelling' | null
+  >(null);
 
-  const handleToneChange = (tone: 'natural' | 'witty' | 'promo' | 'storytelling') => {
-    setIsGenerating(true);
+  const handleToneChange = (tone: 'witty' | 'promo' | 'storytelling') => {
+    if (loadingTone) return;
+    setLoadingTone(tone);
+    const nextTone = currentTone === tone ? 'natural' : tone;
     setTimeout(() => {
-      onSelectTone(tone);
-      setIsGenerating(false);
-    }, 300);
+      onSelectTone(nextTone);
+      setLoadingTone(null);
+    }, 600);
   };
 
-  const handlePublishWithConfetti = () => {
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.85 },
-      colors: ['#06B6D4', '#8B5CF6', '#10B981', '#F59E0B'],
-    });
-    onPublish();
-  };
+  const modificationButtons = [
+    {
+      id: 'witty' as const,
+      label: 'Make Witty',
+      loadingLabel: 'Generating...',
+      icon: Sparkles,
+    },
+    {
+      id: 'promo' as const,
+      label: 'Add 20% Promo',
+      loadingLabel: 'Applying...',
+      icon: Tag,
+    },
+    {
+      id: 'storytelling' as const,
+      label: 'Storytelling',
+      loadingLabel: 'Writing...',
+      icon: BookOpen,
+    },
+  ];
 
   return (
-    <div className="sticky bottom-6 z-30 max-w-2xl mx-auto w-full px-4">
-      <div className="p-2.5 rounded-2xl bg-white/95 dark:bg-[#131B26]/95 backdrop-blur-xl border border-slate-200 dark:border-[#1F2C3F] shadow-2xl shadow-slate-900/10 dark:shadow-black/80 flex flex-wrap items-center justify-between gap-2.5 transition-all">
-        {/* Left AI Tone Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">
-          <button
-            onClick={() => handleToneChange('witty')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shrink-0',
-              currentTone === 'witty'
-                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/25'
-                : 'bg-slate-100 dark:bg-[#1A2433] text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-[#2D3D56] hover:bg-slate-200 dark:hover:bg-[#223044]'
-            )}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Make Witty</span>
-          </button>
-
-          <button
-            onClick={() => handleToneChange('promo')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shrink-0',
-              currentTone === 'promo'
-                ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-md shadow-rose-500/25'
-                : 'bg-slate-100 dark:bg-[#1A2433] text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-[#2D3D56] hover:bg-slate-200 dark:hover:bg-[#223044]'
-            )}
-          >
-            <Tag className="w-3.5 h-3.5 text-rose-400" />
-            <span>Add 20% Promo</span>
-          </button>
-
-          <button
-            onClick={() => handleToneChange('storytelling')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shrink-0',
-              currentTone === 'storytelling'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/25'
-                : 'bg-slate-100 dark:bg-[#1A2433] text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-[#2D3D56] hover:bg-slate-200 dark:hover:bg-[#223044]'
-            )}
-          >
-            <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Storytelling</span>
-          </button>
-
-          <button
-            onClick={() => handleToneChange('natural')}
-            className={cn(
-              'flex items-center gap-1.5 p-2 rounded-xl text-xs font-medium transition-colors cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white',
-              currentTone === 'natural' && 'font-bold text-cyan-600 dark:text-cyan-400 bg-slate-100 dark:bg-[#1A2433]'
-            )}
-            title="Reset to default recommendation"
-          >
-            <RefreshCw className={cn('w-3.5 h-3.5', isGenerating && 'animate-spin')} />
-          </button>
-        </div>
-
-        {/* Right Primary Schedule & Publish Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={onSchedule}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 shadow-sm',
-              isScheduled
-                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-bold'
-                : 'bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white font-bold hover:brightness-110 shadow-md shadow-cyan-600/20'
-            )}
-          >
-            {isScheduled ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Scheduled (8:00 PM)</span>
-              </>
-            ) : (
-              <>
-                <Calendar className="w-4 h-4 text-white" />
-                <span>1-Click Schedule</span>
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={handlePublishWithConfetti}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-sm',
-              isPublished
-                ? 'bg-violet-100 dark:bg-violet-950/60 text-violet-800 dark:text-violet-300 border border-violet-300 dark:border-violet-700/60'
-                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-800 dark:hover:bg-slate-100 shadow-md'
-            )}
-          >
-            <Send className="w-4 h-4" />
-            <span>{isPublished ? 'Published!' : 'Publish'}</span>
-          </button>
-        </div>
+    <>
+      {/* 1. Progressive Blur Background (Smoothly blends to --bg-main) */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-40 select-none overflow-hidden z-20"
+        aria-hidden="true"
+      >
+        <div
+          className="absolute inset-0 backdrop-blur-[2px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent 0%, black 25%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 25%)',
+          }}
+        />
+        <div
+          className="absolute inset-0 backdrop-blur-[6px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent 20%, black 50%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 20%, black 50%)',
+          }}
+        />
+        <div
+          className="absolute inset-0 backdrop-blur-[14px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent 40%, black 75%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 40%, black 75%)',
+          }}
+        />
+        <div
+          className="absolute inset-0 backdrop-blur-[24px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent 65%, black 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 65%, black 100%)',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--bg-main)]/30 to-[var(--bg-main)]/95" />
       </div>
-    </div>
+
+      {/* 2. Floating Modification Buttons Toolbar (Equal-width, reduced radius) */}
+      <div className="absolute bottom-5 inset-x-0 z-30 flex justify-center px-4 pointer-events-none">
+        <nav
+          className="pointer-events-auto max-w-md w-full p-1.5 rounded-lg bg-[var(--bg-card)]/95 backdrop-blur-xl border border-[var(--border-subtle)] shadow-lg shadow-black/5 dark:shadow-black/60 transition-all"
+          aria-label="Tone modifiers"
+        >
+          <div className="grid grid-cols-3 gap-1.5 w-full">
+            {modificationButtons.map((btn) => {
+              const Icon = btn.icon;
+              const isLoading = loadingTone === btn.id;
+              const isOtherLoading = loadingTone !== null && !isLoading;
+              const isActive = currentTone === btn.id;
+
+              return (
+                <button
+                  key={btn.id}
+                  onClick={() => handleToneChange(btn.id)}
+                  disabled={loadingTone !== null}
+                  className={cn(
+                    'w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all cursor-pointer truncate',
+                    isActive
+                      ? 'bg-[var(--brand-primary)] text-[var(--brand-primary-fg)] font-semibold shadow-xs'
+                      : 'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
+                    isOtherLoading && 'opacity-30 cursor-not-allowed pointer-events-none',
+                    isLoading &&
+                      'opacity-90 cursor-wait bg-[var(--brand-primary)] text-[var(--brand-primary-fg)]'
+                  )}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                      <span className="truncate">{btn.loadingLabel}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{btn.label}</span>
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </>
   );
 }
+
+export { FloatingQuickActions as BottomActionBar };

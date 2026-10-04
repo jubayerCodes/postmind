@@ -748,7 +748,7 @@ Prepare the platform for real customers at scale.
 - Zod
 - Recharts
 - GSAP
-- Zustand
+- Zustand (Exclusive client state store — React Context is strictly forbidden)
 
 ---
 
@@ -1216,6 +1216,7 @@ AI/code agents working on this project should follow these principles:
 16. Keep environment-specific configuration in environment variables.
 17. Write reusable components instead of duplicating UI/business logic.
 18. Build features incrementally; do not implement future-version functionality prematurely.
+19. Client-Side State Management: Use Zustand exclusively for storing and managing data on the client. Do NOT use React Context anywhere.
 
 ---
 
@@ -1292,6 +1293,7 @@ The competitive advantage should therefore come from the **merchant-specific lea
 | **Payments (International)** | Stripe (USD, recurring card subscriptions, customer portal) |
 | **Payments (Bangladesh)** | SSLCommerz (BDT, bKash, Nagad, Rocket, local cards, IPN) |
 | **Charts & Visuals** | Recharts |
+| **Client State Management** | Zustand (Strict requirement: do NOT use React Context anywhere) |
 | **Schema Validation** | Zod |
 | **Testing** | Vitest + Playwright |
 | **Error Monitoring** | Sentry |

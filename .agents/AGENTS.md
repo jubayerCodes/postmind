@@ -43,6 +43,7 @@
 6. **Error Handling & Idempotency**:
    - Safe API error handling with informative, sanitized error responses.
    - Background worker jobs (publishing, notifications) must be idempotent and retry safely.
+7. **Client-Side State Management (Zustand Only)**: Everywhere on the frontend, use Zustand exclusively to store and manage data on the client. Do NOT use React Context anywhere.
 
 ---
 

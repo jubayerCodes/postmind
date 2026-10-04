@@ -1,0 +1,163 @@
+// PostMind Prisma Schema
+// Database: Neon DB (Serverless PostgreSQL)
+// Architecture: Strict Multi-Tenant Isolation by storeId
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --------------------------------------------------------
+// 1. User & Identity (Synced with Supabase Auth)
+// --------------------------------------------------------
+model User {
+  id        String   @id // Supabase auth.users UUID (sub)
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stores Store[]
+
+  @@map("users")
+}
+
+// --------------------------------------------------------
+// 2. Multi-Tenant Store / Workspace
+// --------------------------------------------------------
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  currency  String   @default("BDT")
+  timezone  String   @default("Asia/Dhaka")
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner          User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  products       Product[]
+  contents       Content[]
+  socialAccounts SocialAccount[]
+
+  @@index([ownerId])
+  @@map("stores")
+}
+
+// --------------------------------------------------------
+// 3. Product Catalog
+// --------------------------------------------------------
+model Product {
+  id         String   @id @default(cuid())
+  storeId    String
+  name       String
+  price      Decimal  @db.Decimal(12, 2)
+  currency   String   @default("BDT")
+  category   String   @default("General")
+  stock      Int      @default(0)
+  image      String?
+  tagline    String?
+  features   String[] @default([])
+  discount   String?
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  store    Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  contents Content[]
+
+  @@index([storeId])
+  @@index([storeId, category])
+  @@index([storeId, createdAt])
+  @@map("products")
+}
+
+// --------------------------------------------------------
+// 4. Content & Social Post Pipeline
+// --------------------------------------------------------
+enum PostType {
+  PRODUCT_SHOWCASE
+  OFFER
+  ENGAGEMENT
+  STORY
+}
+
+enum ContentTone {
+  NATURAL
+  WITTY
+  PROMO
+  STORYTELLING
+}
+
+enum ContentStatus {
+  DRAFT
+  READY
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+model Content {
+  id          String        @id @default(cuid())
+  storeId     String
+  productId   String?
+  headline    String
+  caption     String        @db.Text
+  hashtags    String[]      @default([])
+  cta         String?
+  postType    PostType      @default(PRODUCT_SHOWCASE)
+  tone        ContentTone   @default(NATURAL)
+  status      ContentStatus @default(READY)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([storeId, status])
+  @@index([storeId, createdAt])
+  @@map("contents")
+}
+
+// --------------------------------------------------------
+// 5. Social Account Connections (Meta / Facebook)
+// --------------------------------------------------------
+enum SocialPlatform {
+  META_FACEBOOK
+  INSTAGRAM
+}
+
+enum SocialConnectionStatus {
+  CONNECTED
+  EXPIRED
+  DISCONNECTED
+}
+
+model SocialAccount {
+  id                   String                 @id @default(cuid())
+  storeId              String
+  platform             SocialPlatform
+  platformAccountId    String
+  accountName          String
+  encryptedAccessToken String?                @db.Text
+  status               SocialConnectionStatus @default(CONNECTED)
+  tokenExpiresAt       DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, platform, platformAccountId])
+  @@index([storeId])
+  @@map("social_accounts")
+}

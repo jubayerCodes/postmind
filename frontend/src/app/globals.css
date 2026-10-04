@@ -3,36 +3,116 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  /* ==========================================================================
+     1. Facebook Theme (Default)
+     ========================================================================== */
   :root {
-    --bg-main: #F8FAFC;
+    --bg-main: #F0F2F5;
     --bg-card: #FFFFFF;
-    --bg-card-hover: #F1F5F9;
+    --bg-card-hover: #E4E6EB;
     --bg-sidebar: #FFFFFF;
-    --border-subtle: #E2E8F0;
-    --border-active: #CBD5E1;
-    --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #94A3B8;
-    --accent-cyan: #0284C7;
-    --accent-violet: #7C3AED;
-    --accent-emerald: #059669;
-    --accent-rose: #E11D48;
+    --border-subtle: #E4E6EB;
+    --border-active: #CED0D4;
+    --text-primary: #050505;
+    --text-secondary: #65676B;
+    --text-muted: #8A8D91;
+    --brand-primary: #1877F2;
+    --brand-primary-hover: #166FE5;
+    --brand-primary-light: #E7F3FF;
+    --brand-primary-fg: #FFFFFF;
+    --brand-name: "Facebook";
   }
 
   .dark {
-    --bg-main: #0B0F17;
-    --bg-card: #131B26;
-    --bg-card-hover: #1A2433;
-    --bg-sidebar: #0E141E;
-    --border-subtle: #1F2C3F;
-    --border-active: #2D3D56;
-    --text-primary: #F0F6FC;
-    --text-secondary: #94A3B8;
-    --text-muted: #64748B;
-    --accent-cyan: #06B6D4;
-    --accent-violet: #8B5CF6;
-    --accent-emerald: #10B981;
-    --accent-rose: #F43F5E;
+    --bg-main: #18191A;
+    --bg-card: #242526;
+    --bg-card-hover: #3A3B3C;
+    --bg-sidebar: #242526;
+    --border-subtle: #393A3B;
+    --border-active: #4E4F50;
+    --text-primary: #E4E6EB;
+    --text-secondary: #B0B3B8;
+    --text-muted: #8A8D91;
+    --brand-primary: #2D88FF;
+    --brand-primary-hover: #1877F2;
+    --brand-primary-light: rgba(45, 136, 255, 0.15);
+    --brand-primary-fg: #FFFFFF;
+  }
+
+  /* ==========================================================================
+     2. Instagram Theme (Warm Sunset Coral / Orange)
+     ========================================================================== */
+  [data-brand="instagram"] {
+    --bg-main: #FAFAFA;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F2F2F2;
+    --bg-sidebar: #FFFFFF;
+    --border-subtle: #DBDBDB;
+    --border-active: #C7C7C7;
+    --text-primary: #262626;
+    --text-secondary: #737373;
+    --text-muted: #8E8E8E;
+    --brand-primary: #FA582C;
+    --brand-primary-hover: #E0481F;
+    --brand-primary-light: #FFF0EB;
+    --brand-primary-fg: #FFFFFF;
+    --brand-name: "Instagram";
+  }
+
+  [data-brand="instagram"].dark,
+  .dark [data-brand="instagram"],
+  [data-brand="instagram"] .dark {
+    --bg-main: #000000;
+    --bg-card: #121212;
+    --bg-card-hover: #1F1F1F;
+    --bg-sidebar: #121212;
+    --border-subtle: #262626;
+    --border-active: #363636;
+    --text-primary: #F5F5F5;
+    --text-secondary: #A8A8A8;
+    --text-muted: #737373;
+    --brand-primary: #FF5A36;
+    --brand-primary-hover: #FA582C;
+    --brand-primary-light: rgba(255, 90, 54, 0.15);
+    --brand-primary-fg: #FFFFFF;
+  }
+
+  /* ==========================================================================
+     3. WhatsApp Theme (Emerald / Mint Teal Green)
+     ========================================================================== */
+  [data-brand="whatsapp"] {
+    --bg-main: #F0F4F2;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #E9EDEF;
+    --bg-sidebar: #FFFFFF;
+    --border-subtle: #E9EDEF;
+    --border-active: #D1D7DB;
+    --text-primary: #111B21;
+    --text-secondary: #667781;
+    --text-muted: #8696A0;
+    --brand-primary: #00A884;
+    --brand-primary-hover: #008f6f;
+    --brand-primary-light: #E6F7F3;
+    --brand-primary-fg: #FFFFFF;
+    --brand-name: "WhatsApp";
+  }
+
+  [data-brand="whatsapp"].dark,
+  .dark [data-brand="whatsapp"],
+  [data-brand="whatsapp"] .dark {
+    --bg-main: #0C1317;
+    --bg-card: #202C33;
+    --bg-card-hover: #2A3942;
+    --bg-sidebar: #111B21;
+    --border-subtle: #222E35;
+    --border-active: #374248;
+    --text-primary: #E9EDEF;
+    --text-secondary: #8696A0;
+    --text-muted: #667781;
+    --brand-primary: #00A884;
+    --brand-primary-hover: #02b68f;
+    --brand-primary-light: rgba(0, 168, 132, 0.15);
+    --brand-primary-fg: #FFFFFF;
   }
 }
 
@@ -41,20 +121,7 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  transition: background-color 0.25s ease, color 0.25s ease;
-}
-
-/* Custom glowing effects */
-.glow-cyan {
-  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35);
-}
-
-.glow-violet {
-  box-shadow: 0 0 20px -3px rgba(139, 92, 246, 0.35);
-}
-
-.glow-card {
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(6, 182, 212, 0.15);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 /* Custom sleek scrollbar */

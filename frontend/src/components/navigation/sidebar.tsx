@@ -8,11 +8,13 @@ import {
   BarChart3,
   Settings,
   Layers,
-  Zap,
   Store,
   ChevronDown,
+  Command,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStores } from '@/hooks/use-stores';
 
 interface SidebarProps {
   activeTab: string;
@@ -21,61 +23,148 @@ interface SidebarProps {
 
 export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const navItems = [
-    { id: 'feed', label: 'Feed Studio', icon: Sparkles, badge: 'AI Live' },
+    { id: 'feed', label: 'Feed Studio', icon: Sparkles, badge: 'Live' },
     { id: 'stories', label: 'Stories & Reels', icon: Layers },
     { id: 'products', label: 'Products', icon: ShoppingBag, count: '4' },
-    { id: 'calendar', label: 'Calendar', icon: Calendar, badge: '3 Scheduled' },
+    { id: 'calendar', label: 'Calendar', icon: Calendar, badge: '3' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
+  const { stores, activeStore, setActiveStoreId, createStore, isCreating } = useStores();
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const [isCreatingNew, setIsCreatingNew] = React.useState(false);
+  const [newStoreName, setNewStoreName] = React.useState('');
+
+  const handleCreateStore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStoreName.trim()) return;
+    await createStore({ name: newStoreName.trim(), currency: 'BDT' });
+    setNewStoreName('');
+    setIsCreatingNew(false);
+    setIsDropdownOpen(false);
+  };
+
   return (
-    <aside className="w-64 border-r border-slate-200 dark:border-[#1F2C3F] bg-white dark:bg-[#0E141E] flex flex-col justify-between p-4 shrink-0 transition-colors z-20">
-      <div>
+    <aside className="w-60 border-r border-[var(--border-subtle)] bg-[var(--bg-sidebar)] flex flex-col justify-between p-3 shrink-0 transition-colors z-20 select-none">
+      <div className="space-y-3.5">
         {/* 1. Brand Logo Header */}
-        <div className="flex items-center gap-3 px-2 py-2 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 text-white shrink-0">
-            <Zap className="w-5 h-5 fill-current" />
+        <div className="flex items-center gap-2.5 px-2 pt-1">
+          <div className="w-7 h-7 rounded-md bg-[var(--brand-primary)] text-[var(--brand-primary-fg)] flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+            <Command className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-lg tracking-tight text-slate-900 dark:text-white">
-                PostMind
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                AI
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Social Manager SaaS</p>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm tracking-tight text-[var(--text-primary)]">
+              PostMind
+            </span>
+            <span className="text-[10px] font-mono px-1 py-0.2 rounded border border-[var(--border-subtle)] text-[var(--text-secondary)]">
+              AI
+            </span>
           </div>
         </div>
 
-        {/* 2. Shop Selector at bottom of logo area */}
-        <div className="mb-5 px-1">
-          <div className="p-2.5 rounded-xl border border-slate-200 dark:border-[#1F2C3F] bg-slate-50 dark:bg-[#131B26] hover:bg-slate-100 dark:hover:bg-[#1A2433] transition-all duration-300 cursor-pointer group shadow-xs">
+        {/* 2. Store Selector with Dropdown */}
+        <div className="px-1 relative">
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="w-full p-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer group shadow-2xs text-left"
+          >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/10 to-cyan-500/10 dark:bg-cyan-500/10 text-violet-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
-                  <Store className="w-4 h-4" />
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded bg-[var(--bg-hover)] text-[var(--text-primary)] flex items-center justify-center shrink-0">
+                  <Store className="w-3 h-3" />
                 </div>
-                <div className="min-w-0 text-left">
-                  <h2 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                    UrbanWear Dhaka
+                <div className="min-w-0">
+                  <h2 className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                    {activeStore?.name || 'UrbanWear Dhaka'}
                   </h2>
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
-                    <span className="font-medium">🇧🇩 BD</span>
+                  <div className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)]">
+                    <span>{activeStore?.currency === 'BDT' ? '🇧🇩 BDT' : '🌐 USD'}</span>
                     <span>•</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Online</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">Online</span>
                   </div>
                 </div>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-transform duration-200 shrink-0" />
+              <ChevronDown
+                className={cn(
+                  'w-3.5 h-3.5 text-[var(--text-secondary)] transition-transform duration-200 shrink-0',
+                  isDropdownOpen && 'rotate-180'
+                )}
+              />
             </div>
-          </div>
+          </button>
+
+          {/* Store Switcher Dropdown Menu */}
+          {isDropdownOpen && (
+            <div className="absolute top-full left-1 right-1 mt-1.5 p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-lg z-50 space-y-1 animate-in fade-in-0 zoom-in-95 duration-100">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)] px-2 py-1">
+                Your Workspaces
+              </div>
+              <div className="max-h-40 overflow-y-auto space-y-0.5">
+                {stores.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setActiveStoreId(s.id);
+                      setIsDropdownOpen(false);
+                    }}
+                    className={cn(
+                      'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-left transition-colors cursor-pointer',
+                      s.id === activeStore?.id
+                        ? 'bg-[var(--brand-primary-light)] text-[var(--brand-primary)] font-semibold dark:bg-[var(--brand-primary)]/15 dark:text-[var(--brand-primary)]'
+                        : 'hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    )}
+                  >
+                    <span className="truncate">{s.name}</span>
+                    {s.id === activeStore?.id && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)]" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {isCreatingNew ? (
+                <form onSubmit={handleCreateStore} className="pt-2 border-t border-[var(--border-subtle)] space-y-1.5">
+                  <input
+                    type="text"
+                    placeholder="Store name..."
+                    value={newStoreName}
+                    onChange={(e) => setNewStoreName(e.target.value)}
+                    autoFocus
+                    className="w-full px-2 py-1 text-xs rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)]"
+                  />
+                  <div className="flex gap-1 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingNew(false)}
+                      className="px-2 py-0.5 text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isCreating}
+                      className="px-2 py-0.5 text-[10px] bg-[var(--brand-primary)] text-white font-semibold rounded hover:brightness-110"
+                    >
+                      {isCreating ? 'Adding...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setIsCreatingNew(true)}
+                  className="w-full mt-1 pt-1.5 border-t border-[var(--border-subtle)] flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-[var(--brand-primary)] hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Create New Store</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* 3. Navigation List with Floating Active Styles */}
-        <nav className="space-y-1">
+        {/* 3. Navigation List */}
+        <nav className="space-y-0.5 px-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -84,19 +173,17 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ease-out cursor-pointer text-left group',
+                  'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer text-left',
                   isActive
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold shadow-lg shadow-violet-500/25 scale-[1.02] translate-x-0.5'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#131B26] hover:translate-x-0.5'
+                    ? 'bg-[var(--brand-primary-light)] text-[var(--brand-primary)] font-semibold dark:bg-[var(--brand-primary)]/15 dark:text-[var(--brand-primary)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <Icon
                     className={cn(
-                      'w-4 h-4 transition-transform duration-300 group-hover:scale-110',
-                      isActive
-                        ? 'text-white drop-shadow-xs'
-                        : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'
+                      'w-3.5 h-3.5',
+                      isActive ? 'text-[var(--brand-primary)]' : 'text-[var(--text-secondary)]'
                     )}
                   />
                   <span>{item.label}</span>
@@ -104,24 +191,17 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 {item.badge && (
                   <span
                     className={cn(
-                      'text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors duration-300',
+                      'text-[10px] font-mono px-1.5 py-0.2 rounded',
                       isActive
-                        ? 'bg-white/20 text-white border border-white/30 backdrop-blur-xs'
-                        : 'bg-violet-100 dark:bg-cyan-500/10 text-violet-700 dark:text-cyan-400 border border-violet-200 dark:border-cyan-500/20'
+                        ? 'bg-[var(--brand-primary)] text-white'
+                        : 'bg-[var(--bg-hover)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
                     )}
                   >
                     {item.badge}
                   </span>
                 )}
                 {item.count && (
-                  <span
-                    className={cn(
-                      'text-xs font-mono px-1.5 py-0.5 rounded transition-colors duration-300',
-                      isActive
-                        ? 'bg-white/20 text-white'
-                        : 'text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-[#131B26]'
-                    )}
-                  >
+                  <span className="text-[10px] font-mono text-[var(--text-secondary)]">
                     {item.count}
                   </span>
                 )}
@@ -132,15 +212,13 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       </div>
 
       {/* Footer Store Plan Status */}
-      <div className="pt-4 border-t border-slate-200 dark:border-[#1F2C3F] px-1 space-y-2">
-        <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-[#131B26] border border-slate-200 dark:border-[#1F2C3F]">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Monthly AI Quota</span>
-            <span className="text-cyan-600 dark:text-cyan-400 font-mono font-bold">14 / 50</span>
-          </div>
-          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-cyan-500 to-violet-500 rounded-full w-[28%]" />
-          </div>
+      <div className="p-2.5 rounded-md bg-[var(--bg-hover)] border border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between text-[11px] mb-1.5">
+          <span className="text-[var(--text-secondary)]">Monthly AI Quota</span>
+          <span className="font-mono text-[var(--text-primary)] font-semibold">14 / 50</span>
+        </div>
+        <div className="w-full h-1 bg-[var(--border-subtle)] rounded-full overflow-hidden">
+          <div className="h-full bg-[var(--brand-primary)] rounded-full w-[28%]" />
         </div>
       </div>
     </aside>
