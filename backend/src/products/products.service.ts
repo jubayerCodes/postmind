@@ -1,15 +1,37 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { BulkCreateProductsDto } from './dto/bulk-create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
 import { Product, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ProductsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {}
 
   async create(storeId: string, dto: CreateProductDto): Promise<Product> {
+    let resolvedImage = dto.image;
+
+    // If image is a base64 data URI, upload it to Supabase Storage for permanent CDN hosting
+    if (resolvedImage && resolvedImage.startsWith('data:image/')) {
+      try {
+        const uploadRes = await this.storageService.uploadBase64Image(
+          resolvedImage,
+          `${dto.name || 'product'}.jpg`,
+        );
+        resolvedImage = uploadRes.url;
+      } catch (err: any) {
+        this.logger.warn(`Failed to upload base64 image: ${err.message}`);
+      }
+    }
+
     return this.prisma.product.create({
       data: {
         storeId,
@@ -18,12 +40,41 @@ export class ProductsService {
         currency: dto.currency ?? 'BDT',
         category: dto.category ?? 'General',
         stock: dto.stock ?? 0,
-        image: dto.image,
+        image: resolvedImage,
         tagline: dto.tagline,
         features: dto.features ?? [],
         discount: dto.discount,
       },
     });
+  }
+
+  async bulkCreate(
+    storeId: string,
+    dto: BulkCreateProductsDto,
+  ): Promise<{ count: number; products: Product[] }> {
+    const created = await this.prisma.$transaction(
+      dto.products.map((item) =>
+        this.prisma.product.create({
+          data: {
+            storeId,
+            name: item.name,
+            price: new Prisma.Decimal(item.price),
+            currency: item.currency ?? 'BDT',
+            category: item.category ?? 'General',
+            stock: item.stock ?? 10,
+            image: item.image,
+            tagline: item.tagline,
+            features: item.features ?? [],
+            discount: item.discount,
+          },
+        }),
+      ),
+    );
+
+    return {
+      count: created.length,
+      products: created,
+    };
   }
 
   async findAll(

@@ -45,12 +45,19 @@ export class AuthService {
         ? (rawPicture as any).data.url
         : undefined;
 
-    return this.usersService.findOrCreateUser({
+    const userEntity = await this.usersService.findOrCreateUser({
       id: user.id,
       email: user.email ?? `${user.id}@postmind.local`,
       name,
       avatarUrl,
     });
+
+    const storeName =
+      (user.user_metadata?.store_name as string) ||
+      (user.user_metadata?.storeName as string) ||
+      undefined;
+
+    return Object.assign(userEntity, { storeName });
   }
 
   async getDevUser(devUserId: string): Promise<User> {

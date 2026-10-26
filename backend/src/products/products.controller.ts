@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { BulkCreateProductsDto } from './dto/bulk-create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
@@ -28,6 +29,14 @@ export class ProductsController {
     @Body() createProductDto: CreateProductDto,
   ): Promise<Product> {
     return this.productsService.create(storeId, createProductDto);
+  }
+
+  @Post('bulk')
+  async bulkCreate(
+    @Param('storeId') storeId: string,
+    @Body() bulkDto: BulkCreateProductsDto,
+  ): Promise<{ count: number; products: Product[] }> {
+    return this.productsService.bulkCreate(storeId, bulkDto);
   }
 
   @Get()

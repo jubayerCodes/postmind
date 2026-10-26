@@ -11,7 +11,7 @@ import { StoresService } from './stores.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { User, Store } from '@prisma/client';
 
 @Controller('stores')
@@ -28,8 +28,8 @@ export class StoresController {
   }
 
   @Get()
-  async findAll(@CurrentUser() user: User): Promise<Store[]> {
-    return this.storesService.findUserStores(user.id);
+  async findAll(@CurrentUser() user: AuthenticatedUser): Promise<Store[]> {
+    return this.storesService.findUserStores(user.id, user.storeName);
   }
 
   @Get(':id')

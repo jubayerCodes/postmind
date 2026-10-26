@@ -19,7 +19,7 @@ export interface SocialPostState {
   hashtags: string[];
   cta: string;
   postType: 'PRODUCT_SHOWCASE' | 'OFFER' | 'ENGAGEMENT' | 'STORY';
-  status: 'READY' | 'SCHEDULED' | 'PUBLISHED';
+  status: 'DRAFT' | 'READY' | 'APPROVED' | 'SCHEDULED' | 'PUBLISHED';
   platform: 'META_FACEBOOK' | 'INSTAGRAM';
   scheduledTime?: string;
   likesCount: number;

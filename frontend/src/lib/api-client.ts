@@ -38,15 +38,20 @@ export async function apiClient<T>(
     // Ignore errors when running outside browser or without active session
   }
 
+  const isFormData =
+    typeof FormData !== 'undefined' && customConfig.body instanceof FormData;
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(customConfig.headers as Record<string, string>),
   };
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    // Development fallback so local app can be explored and seeded immediately
+  } else if (
+    typeof window !== 'undefined' &&
+    window.sessionStorage.getItem('postmind_dev_guest') === 'true'
+  ) {
     headers['x-dev-user-id'] = 'dev-merchant-urbanwear';
   }
 

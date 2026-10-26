@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "tunnel": "ngrok http 3000",
+    "tunnel:cf": "npx untun tunnel --port 3000"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

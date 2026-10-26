@@ -1,4 +1,5 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export enum ContentToneEnum {
   NATURAL = 'NATURAL',
@@ -14,6 +15,9 @@ export class GeneratePostDto {
 
   @IsEnum(ContentToneEnum)
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toUpperCase() : value,
+  )
   tone: ContentToneEnum = ContentToneEnum.NATURAL;
 
   @IsString()

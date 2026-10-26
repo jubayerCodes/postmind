@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { apiClient } from '@/lib/api-client';
+import { useStoreWorkspaceStore } from '@/stores/store-workspace-store';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface UserProfile {
@@ -97,10 +98,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Listen for background auth state changes (login, logout, token refresh)
       supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        const prevUserId = get().user?.id;
+        const newUserId = newSession?.user?.id;
+
+        if (newUserId && prevUserId && newUserId !== prevUserId) {
+          useStoreWorkspaceStore.getState().setActiveStoreId(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('postmind_active_store_id');
+          }
+        }
+
         set({ session: newSession });
         if (newSession) {
           await get().syncProfileAndStores();
         } else if (!get().isDevGuest) {
+          useStoreWorkspaceStore.getState().setActiveStoreId(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('postmind_active_store_id');
+          }
           set({ user: null, stores: [] });
         }
       });
@@ -124,6 +139,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw error;
       }
 
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('postmind_dev_guest');
+      }
       set({ session: data.session, isDevGuest: false });
       await get().syncProfileAndStores();
       set({ isLoading: false });
@@ -179,6 +197,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         options: {
           data: {
             full_name: fullName,
+            store_name: storeName?.trim() || undefined,
           },
         },
       });
@@ -192,10 +211,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const hasSession = !!data.session;
       if (hasSession) {
         set({ session: data.session, isDevGuest: false });
-        // Sync profile with backend
-        await get().syncProfileAndStores();
 
-        // If user entered a store name during signup, automatically provision it
+        // If user entered a store name during signup, automatically provision it before sync
         if (storeName?.trim()) {
           try {
             await apiClient('/stores', {
@@ -206,11 +223,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 timezone: 'Asia/Dhaka',
               }),
             });
-            await get().syncProfileAndStores();
           } catch (createStoreErr) {
             console.warn('Failed to auto-provision initial store:', createStoreErr);
           }
         }
+
+        // Sync profile with backend
+        await get().syncProfileAndStores();
       }
 
       set({ isLoading: false });
@@ -229,6 +248,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err) {
       console.warn('Error signing out from Supabase:', err);
     } finally {
+      // Clear client workspace state
+      useStoreWorkspaceStore.getState().setActiveStoreId(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('postmind_active_store_id');
+        sessionStorage.removeItem('postmind_dev_guest');
+      }
       set({
         user: null,
         session: null,
@@ -305,6 +330,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginAsDevGuest: async () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('postmind_dev_guest', 'true');
+    }
     set({
       isDevGuest: true,
       user: {

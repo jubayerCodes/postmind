@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { GeneratePostDto, ContentToneEnum } from './dto/generate-post.dto';
+import { RegeneratePostDto } from './dto/regenerate-post.dto';
 import {
   SocialPostOutput,
   SocialPostOutputSchema,
@@ -91,6 +92,86 @@ export class ContentGeneratorService {
     });
 
     return { content, aiOutput: validatedOutput };
+  }
+
+  /**
+   * Regenerate an AI post preserving the original post type and product context
+   */
+  async regeneratePost(
+    storeId: string,
+    contentId: string,
+    dto?: RegeneratePostDto,
+  ): Promise<{ content: Content; aiOutput: SocialPostOutput }> {
+    const store = await this.prisma.store.findUnique({
+      where: { id: storeId },
+    });
+
+    if (!store) {
+      throw new NotFoundException(`Store with ID '${storeId}' not found`);
+    }
+
+    const existingContent = await this.prisma.content.findFirst({
+      where: { id: contentId, storeId },
+      include: { product: true },
+    });
+
+    if (!existingContent) {
+      throw new NotFoundException(
+        `Content with ID '${contentId}' not found in this store`,
+      );
+    }
+
+    const product = existingContent.product;
+    const tone =
+      dto?.tone ||
+      (existingContent.tone.toLowerCase() as ContentToneEnum) ||
+      ContentToneEnum.NATURAL;
+
+    // Execute generation with preserved product context & requested tone
+    const rawOutput = await this.executeGeneration({
+      storeName: store.name,
+      currency: store.currency,
+      productName: product?.name,
+      productPrice: product?.price ? Number(product.price) : undefined,
+      productCategory: product?.category,
+      productTagline: product?.tagline || undefined,
+      productFeatures: product?.features || [],
+      productDiscount: product?.discount,
+      tone,
+      customPrompt: dto?.customPrompt,
+      offerDetails: dto?.offerDetails,
+    });
+
+    // Enforce strict Zod schema validation
+    const validatedOutput = SocialPostOutputSchema.parse(rawOutput);
+
+    // CRITICAL CONSTRAINT: Preserve original postType and format
+    const preservedPostType = existingContent.postType;
+
+    // Update existing content record without losing identifiers or relations
+    const updatedContent = await this.prisma.content.update({
+      where: { id: contentId },
+      data: {
+        headline: validatedOutput.headline,
+        caption: validatedOutput.caption,
+        hashtags: validatedOutput.hashtags,
+        cta: validatedOutput.cta,
+        postType: preservedPostType, // explicitly preserved original format
+        tone: validatedOutput.tone as ContentTone,
+        status: ContentStatus.READY,
+      },
+      include: {
+        product: true,
+      },
+    });
+
+    return {
+      content: updatedContent,
+      aiOutput: {
+        ...validatedOutput,
+        postType: preservedPostType,
+      },
+    };
   }
 
   private async executeGeneration(

@@ -4,6 +4,8 @@ export interface AuthenticatedUser {
   id: string; // Supabase sub
   email: string;
   name?: string;
+  avatarUrl?: string;
+  storeName?: string;
 }
 
 export const CurrentUser = createParamDecorator(

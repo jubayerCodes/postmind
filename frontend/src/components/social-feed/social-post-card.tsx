@@ -10,27 +10,66 @@ import {
   Clock,
   ShoppingBag,
   ExternalLink,
+  RefreshCw,
+  Maximize2,
+  Eye,
+  MoreVertical,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Product, SocialPostState } from '@/lib/mock-data';
+import { ImagePreviewModal } from '../products/image-preview-modal';
 
 interface SocialPostCardProps {
   post: SocialPostState;
   product: Product;
   onEditCaption?: (newCaption: string) => void;
   onLikeToggle?: () => void;
+  isGenerating?: boolean;
+  storeName?: string;
+  onRegeneratePost?: () => void;
+  isRegeneratingPost?: boolean;
+  onRegenerateImage?: () => Promise<void> | void;
+  isRegeneratingImage?: boolean;
 }
 
 export function SocialPostCard({
   post,
   product,
   onEditCaption,
+  isGenerating = false,
+  storeName = 'My Store',
+  onRegeneratePost,
+  isRegeneratingPost = false,
+  onRegenerateImage,
+  isRegeneratingImage = false,
 }: SocialPostCardProps) {
   const [likes, setLikes] = React.useState(post.likesCount);
   const [isLiked, setIsLiked] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editableText, setEditableText] = React.useState(post.caption);
+  const [isImagePreviewOpen, setIsImagePreviewOpen] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMenuOpen]);
 
   React.useEffect(() => {
     setEditableText(post.caption);
@@ -58,12 +97,12 @@ export function SocialPostCard({
       <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]/30">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-md bg-[var(--brand-primary)] text-white flex items-center justify-center text-xs font-bold shrink-0">
-            UW
+            {storeName.slice(0, 2).toUpperCase()}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-xs text-[var(--text-primary)]">
-                UrbanWear Dhaka
+                {storeName}
               </span>
               <CheckCircle className="w-3.5 h-3.5 text-[var(--brand-primary)] fill-[var(--brand-primary)]/20" />
             </div>
@@ -77,8 +116,8 @@ export function SocialPostCard({
           </div>
         </div>
 
-        {/* Post Status Badge */}
-        <div className="flex items-center gap-1.5">
+        {/* Post Actions & Status Badge */}
+        <div className="flex items-center gap-2">
           {post.status === 'SCHEDULED' ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
               <Clock className="w-3 h-3" /> Scheduled 8:00 PM
@@ -92,17 +131,136 @@ export function SocialPostCard({
               Ready for Review
             </span>
           )}
+
+          {/* Three-dot Dropdown Menu */}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              aria-label="Post actions menu"
+              title="Post generation & preview options"
+              className={cn(
+                'p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-subtle)] transition-all cursor-pointer',
+                isMenuOpen && 'bg-[var(--bg-card)] border-[var(--border-subtle)] text-[var(--text-primary)] shadow-2xs',
+              )}
+            >
+              {isGenerating || isRegeneratingPost || isRegeneratingImage ? (
+                <RefreshCw className="w-4 h-4 text-[var(--brand-primary)] animate-spin" />
+              ) : (
+                <MoreVertical className="w-4 h-4" />
+              )}
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-60 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-xl z-30 py-1.5 animate-in fade-in-0 zoom-in-95 duration-150">
+                <div className="px-3 py-1 border-b border-[var(--border-subtle)]/60 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                  Post Options
+                </div>
+
+                {/* Regenerate Post Copy */}
+                {onRegeneratePost && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onRegeneratePost();
+                    }}
+                    disabled={isGenerating || isRegeneratingPost}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-start gap-2.5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        'w-3.5 h-3.5 text-[var(--brand-primary)] shrink-0 mt-0.5',
+                        (isGenerating || isRegeneratingPost) && 'animate-spin',
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-xs">
+                        {isGenerating || isRegeneratingPost
+                          ? 'Regenerating Post...'
+                          : 'Regenerate Post'}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                        New caption & copy in {post.postType.toLowerCase().replace('_', ' ')} format
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                {/* Regenerate Product Image */}
+                {onRegenerateImage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onRegenerateImage();
+                    }}
+                    disabled={isRegeneratingImage}
+                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-start gap-2.5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <ImageIcon
+                      className={cn(
+                        'w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5',
+                        isRegeneratingImage && 'animate-spin',
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-xs">
+                        {isRegeneratingImage
+                          ? 'Generating HD Image...'
+                          : 'Regenerate Image'}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                        Create new 1024×1024 studio visual
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                <div className="my-1 border-t border-[var(--border-subtle)]/60" />
+
+                {/* Preview HD Image */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsImagePreviewOpen(true);
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-start gap-2.5 transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-xs">Preview Image (HD)</div>
+                    <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                      Inspect 1024px visual with zoom controls
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Media Image Container */}
+      {/* Media Image Container with HD Preview Button */}
       <div className="relative aspect-square sm:aspect-4/3 w-full bg-slate-950 overflow-hidden group">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          onClick={() => setIsImagePreviewOpen(true)}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] cursor-pointer"
         />
+
+        {/* Hover Full Preview Button */}
+        <button
+          type="button"
+          onClick={() => setIsImagePreviewOpen(true)}
+          className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-white/10 text-white text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90 cursor-pointer shadow-md"
+        >
+          <Maximize2 className="w-3 h-3" />
+          <span>Preview HD</span>
+        </button>
 
         {/* Product Tag Overlay */}
         <div className="absolute bottom-2.5 left-2.5 flex items-center gap-2 px-2.5 py-1 rounded bg-black/80 backdrop-blur-md border border-white/10 text-white text-[11px] font-medium shadow-sm">
@@ -151,7 +309,17 @@ export function SocialPostCard({
 
         {/* Caption Section */}
         <div className="text-xs text-[var(--text-primary)] leading-relaxed">
-          {isEditing ? (
+          {isGenerating ? (
+            <div className="space-y-2 py-2 animate-pulse">
+              <div className="h-3 bg-[var(--bg-hover)] rounded w-3/4" />
+              <div className="h-3 bg-[var(--bg-hover)] rounded w-full" />
+              <div className="h-3 bg-[var(--bg-hover)] rounded w-5/6" />
+              <div className="flex items-center gap-1.5 text-[11px] text-[var(--brand-primary)] font-medium pt-1">
+                <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                <span>Crafting high-converting post with AI...</span>
+              </div>
+            </div>
+          ) : isEditing ? (
             <div className="space-y-2">
               <textarea
                 value={editableText}
@@ -177,7 +345,7 @@ export function SocialPostCard({
             <div className="relative group/caption">
               <p className={cn('whitespace-pre-line', !isExpanded && 'line-clamp-3')}>
                 <span className="font-semibold text-[var(--text-primary)] mr-1.5">
-                  UrbanWear Dhaka
+                  {storeName}
                 </span>
                 {post.caption}
               </p>
@@ -219,6 +387,16 @@ export function SocialPostCard({
           </div>
         </div>
       </div>
+
+      {/* Full HD Image Preview Dialog */}
+      <ImagePreviewModal
+        isOpen={isImagePreviewOpen}
+        onClose={() => setIsImagePreviewOpen(false)}
+        imageUrl={product.image || ''}
+        productTitle={product.name}
+        isRegenerating={isRegeneratingImage}
+        onRegenerate={onRegenerateImage}
+      />
     </div>
   );
 }

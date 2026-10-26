@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5000
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://rqcaoksdmazghdccaybv.supabase.co}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxY2Fva3NkbWF6Z2hkY2NheWJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MDAyNjIsImV4cCI6MjEwNDE3NjI2Mn0.ys5FCh3bOmc3lycFgaItrrhg7lTuczKK7B9F9wtSsys}
+    container_name: postmind-frontend-standalone
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production

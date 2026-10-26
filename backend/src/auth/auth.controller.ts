@@ -16,7 +16,7 @@ export class AuthController {
   @Get('me')
   async getMe(@CurrentUser() user: AuthenticatedUser) {
     const profile = await this.usersService.findById(user.id);
-    const stores = await this.storesService.findUserStores(user.id);
+    const stores = await this.storesService.findUserStores(user.id, user.storeName);
 
     return {
       user: profile || user,

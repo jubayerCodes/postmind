@@ -142,3 +142,21 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-active);
 }
+
+/* Sleek workspace transition indeterminate progress animation */
+@keyframes workspace-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(25%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-workspace-progress {
+  animation: workspace-progress 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+

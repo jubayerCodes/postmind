@@ -114,11 +114,13 @@ model Content {
   cta         String?
   postType    PostType      @default(PRODUCT_SHOWCASE)
   tone        ContentTone   @default(NATURAL)
-  status      ContentStatus @default(READY)
-  scheduledAt DateTime?
-  publishedAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  status         ContentStatus @default(READY)
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  platformPostId String?
+  publishError   String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
