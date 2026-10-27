@@ -101,6 +101,36 @@ export default function DashboardPage() {
     });
   }, [activeStore?.id, products, currentPost, selectedProduct, currentTone, generatePost, isSwitchingWorkspace]);
 
+  // Auto-sync metrics from Meta Graph API when viewing a published post
+  const lastSyncedContentIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (
+      !activeStore?.id ||
+      !currentPost?.id ||
+      currentPost.status !== 'PUBLISHED' ||
+      currentPost.id.startsWith('post-') ||
+      currentPost.id === lastSyncedContentIdRef.current
+    ) {
+      return;
+    }
+
+    lastSyncedContentIdRef.current = currentPost.id;
+    syncPostMetrics(activeStore.id, currentPost.id)
+      .then((res) => {
+        if (res && currentPost?.id) {
+          updateMetrics(currentPost.id, {
+            likesCount: res.likesCount,
+            commentsCount: res.commentsCount,
+            sharesCount: res.sharesCount,
+            metricsLastSyncedAt: res.metricsLastSyncedAt,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('Auto-sync post metrics error:', err);
+      });
+  }, [activeStore?.id, currentPost?.id, currentPost?.status, syncPostMetrics, updateMetrics]);
+
   if (!isInitialized || (!user && !isDevGuest)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg-main)] text-[var(--text-primary)]">
@@ -210,36 +240,6 @@ export default function DashboardPage() {
       : `https://ui-avatars.com/api/?name=${encodeURIComponent(
           activeConnectedAccount?.accountName || activeStore?.name || 'Store',
         )}&background=1877F2&color=fff&size=160&bold=true`);
-
-  // Auto-sync metrics from Meta Graph API when viewing a published post
-  const lastSyncedContentIdRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    if (
-      !activeStore?.id ||
-      !currentPost?.id ||
-      currentPost.status !== 'PUBLISHED' ||
-      currentPost.id.startsWith('post-') ||
-      currentPost.id === lastSyncedContentIdRef.current
-    ) {
-      return;
-    }
-
-    lastSyncedContentIdRef.current = currentPost.id;
-    syncPostMetrics(activeStore.id, currentPost.id)
-      .then((res) => {
-        if (res && currentPost?.id) {
-          updateMetrics(currentPost.id, {
-            likesCount: res.likesCount,
-            commentsCount: res.commentsCount,
-            sharesCount: res.sharesCount,
-            metricsLastSyncedAt: res.metricsLastSyncedAt,
-          });
-        }
-      })
-      .catch((err) => {
-        console.warn('Auto-sync post metrics error:', err);
-      });
-  }, [activeStore?.id, currentPost?.id, currentPost?.status, syncPostMetrics, updateMetrics]);
 
   const handleManualSyncMetrics = async () => {
     if (!activeStore?.id || !currentPost?.id || currentPost.status !== 'PUBLISHED') return;
