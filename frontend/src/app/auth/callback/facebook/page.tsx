@@ -14,6 +14,7 @@ function FacebookCallbackContent() {
 
   const [status, setStatus] = React.useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const hasProcessedRef = React.useRef(false);
 
   React.useEffect(() => {
     async function processCallback() {
@@ -45,10 +46,15 @@ function FacebookCallbackContent() {
       const storeId = storeIdParam || stateStoreId || activeStore?.id;
 
       if (!storeId) {
-        setStatus('error');
-        setErrorMessage('Store context missing. Please try connecting again from the dashboard.');
+        // Wait for store context if not available yet
         return;
       }
+
+      // Guard against React StrictMode duplicate execution (Meta codes are single-use)
+      if (hasProcessedRef.current) {
+        return;
+      }
+      hasProcessedRef.current = true;
 
       try {
         if (devMode === 'true' || !code) {
