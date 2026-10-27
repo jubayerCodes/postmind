@@ -58,6 +58,7 @@ export default function DashboardPage() {
     schedulePost,
     updateCurrentCaption,
     setCurrentPost,
+    updateMetrics,
   } = useContentStore();
 
   const {
@@ -224,15 +225,34 @@ export default function DashboardPage() {
     }
 
     lastSyncedContentIdRef.current = currentPost.id;
-    syncPostMetrics(activeStore.id, currentPost.id).catch((err) => {
-      console.warn('Auto-sync post metrics error:', err);
-    });
-  }, [activeStore?.id, currentPost?.id, currentPost?.status, syncPostMetrics]);
+    syncPostMetrics(activeStore.id, currentPost.id)
+      .then((res) => {
+        if (res && currentPost?.id) {
+          updateMetrics(currentPost.id, {
+            likesCount: res.likesCount,
+            commentsCount: res.commentsCount,
+            sharesCount: res.sharesCount,
+            metricsLastSyncedAt: res.metricsLastSyncedAt,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('Auto-sync post metrics error:', err);
+      });
+  }, [activeStore?.id, currentPost?.id, currentPost?.status, syncPostMetrics, updateMetrics]);
 
   const handleManualSyncMetrics = async () => {
     if (!activeStore?.id || !currentPost?.id || currentPost.status !== 'PUBLISHED') return;
     try {
-      await syncPostMetrics(activeStore.id, currentPost.id);
+      const res = await syncPostMetrics(activeStore.id, currentPost.id);
+      if (res) {
+        updateMetrics(currentPost.id, {
+          likesCount: res.likesCount,
+          commentsCount: res.commentsCount,
+          sharesCount: res.sharesCount,
+          metricsLastSyncedAt: res.metricsLastSyncedAt,
+        });
+      }
     } catch (err) {
       console.warn('Manual post metrics sync error:', err);
     }

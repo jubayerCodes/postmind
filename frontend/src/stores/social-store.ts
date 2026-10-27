@@ -247,14 +247,6 @@ export const useSocialStore = create<SocialState>((set, get) => ({
         storeId,
       });
 
-      // Synchronize updated metrics to contentStore
-      useContentStore.getState().updateMetrics(contentId, {
-        likesCount: res.likesCount,
-        commentsCount: res.commentsCount,
-        sharesCount: res.sharesCount,
-        metricsLastSyncedAt: res.metricsLastSyncedAt,
-      });
-
       set({ isSyncingMetrics: false });
       return res;
     } catch (err: any) {

@@ -52,14 +52,26 @@ export function SocialPostCard({
   isSyncingMetrics = false,
   metricsLastSyncedAt,
 }: SocialPostCardProps) {
-  const [likes, setLikes] = React.useState(post.likesCount);
+  const [likes, setLikes] = React.useState(Number(post.likesCount || 0));
   const [isLiked, setIsLiked] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
-  const [editableText, setEditableText] = React.useState(post.caption);
+  const [editableText, setEditableText] = React.useState(post.caption || '');
   const [isImagePreviewOpen, setIsImagePreviewOpen] = React.useState(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const formattedSyncTime = React.useMemo(() => {
+    if (!metricsLastSyncedAt) return null;
+    try {
+      const d = new Date(metricsLastSyncedAt);
+      return isNaN(d.getTime())
+        ? null
+        : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return null;
+    }
+  }, [metricsLastSyncedAt]);
 
   React.useEffect(() => {
     if (!isMenuOpen) return;
@@ -80,8 +92,8 @@ export function SocialPostCard({
   }, [isMenuOpen]);
 
   React.useEffect(() => {
-    setEditableText(post.caption);
-    setLikes(post.likesCount);
+    setEditableText(post.caption || '');
+    setLikes(Number(post.likesCount || 0));
   }, [post.caption, post.likesCount]);
 
   const handleLike = () => {
@@ -105,18 +117,17 @@ export function SocialPostCard({
       <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]/30">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-md bg-[var(--brand-primary)] text-white flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden border border-[var(--border-subtle)] relative">
-            {pageAvatarUrl ? (
+            <span>{(storeName || 'Store').slice(0, 2).toUpperCase()}</span>
+            {pageAvatarUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={pageAvatarUrl}
-                alt={storeName}
-                className="w-full h-full object-cover"
+                alt={storeName || 'Store'}
+                className="absolute inset-0 w-full h-full object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
-            ) : (
-              <span>{storeName.slice(0, 2).toUpperCase()}</span>
             )}
           </div>
           <div>
@@ -316,7 +327,7 @@ export function SocialPostCard({
             >
               <Heart className={cn('w-3.5 h-3.5', isLiked && 'fill-current')} />
               <span className="font-mono text-xs">
-                {post.status === 'PUBLISHED' ? likes.toLocaleString() : '--'}
+                {post.status === 'PUBLISHED' ? Number(likes || 0).toLocaleString() : '--'}
               </span>
             </button>
             <button
@@ -329,7 +340,7 @@ export function SocialPostCard({
             >
               <MessageCircle className="w-3.5 h-3.5" />
               <span className="font-mono text-xs">
-                {post.status === 'PUBLISHED' ? (post.commentsCount ?? 0) : '--'}
+                {post.status === 'PUBLISHED' ? Number(post.commentsCount || 0).toLocaleString() : '--'}
               </span>
             </button>
             <button
@@ -342,7 +353,7 @@ export function SocialPostCard({
             >
               <Share2 className="w-3.5 h-3.5" />
               <span className="font-mono text-xs">
-                {post.status === 'PUBLISHED' ? (post.sharesCount ?? 0) : '--'}
+                {post.status === 'PUBLISHED' ? Number(post.sharesCount || 0).toLocaleString() : '--'}
               </span>
             </button>
           </div>
@@ -355,8 +366,8 @@ export function SocialPostCard({
                   onClick={() => onSyncMetrics()}
                   disabled={isSyncingMetrics}
                   title={
-                    metricsLastSyncedAt
-                      ? `Synced ${new Date(metricsLastSyncedAt).toLocaleTimeString()} • Refresh from Meta Graph API`
+                    formattedSyncTime
+                      ? `Synced ${formattedSyncTime} • Refresh from Meta Graph API`
                       : 'Sync live engagement from Meta Graph API'
                   }
                   className="inline-flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors cursor-pointer disabled:opacity-50"
