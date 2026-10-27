@@ -38,6 +38,7 @@ export class MetaGraphService implements SocialPlatformProvider {
       state,
       scope: 'pages_show_list,pages_read_engagement,pages_manage_posts',
       response_type: 'code',
+      auth_type: 'rerequest',
     });
 
     return `https://www.facebook.com/${this.graphApiVersion}/dialog/oauth?${params.toString()}`;
