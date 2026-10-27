@@ -20,9 +20,10 @@ export class MetaGraphService implements SocialPlatformProvider {
   /**
    * Generates Facebook OAuth Authorization URL for merchant Facebook Page permissions.
    */
-  getAuthUrl(storeId: string, state: string): string {
+  getAuthUrl(storeId: string, state: string, redirectUriOverride?: string): string {
     const appId = this.configService.get<string>('META_APP_ID');
     const redirectUri =
+      redirectUriOverride ||
       this.configService.get<string>('META_REDIRECT_URI') ||
       'http://localhost:3000/auth/callback/facebook';
 

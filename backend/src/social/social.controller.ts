@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -22,8 +23,11 @@ export class SocialController {
   constructor(private readonly socialService: SocialService) {}
 
   @Get('connect-url')
-  async getConnectUrl(@Param('storeId') storeId: string) {
-    return this.socialService.getConnectUrl(storeId);
+  async getConnectUrl(
+    @Param('storeId') storeId: string,
+    @Query('redirectUri') redirectUri?: string,
+  ) {
+    return this.socialService.getConnectUrl(storeId, redirectUri);
   }
 
   @Post('callback')

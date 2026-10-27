@@ -45,7 +45,7 @@ interface SocialState {
     content: any;
     publishResult: { platformPostId: string; permalinkUrl?: string; publishedAt: string };
   }>;
-  getConnectUrl: (storeId: string) => Promise<string>;
+  getConnectUrl: (storeId: string, redirectUri?: string) => Promise<string>;
   handleOAuthCallback: (
     storeId: string,
     code: string,
@@ -219,9 +219,10 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     }
   },
 
-  getConnectUrl: async (storeId: string) => {
+  getConnectUrl: async (storeId: string, redirectUri?: string) => {
+    const query = redirectUri ? `?redirectUri=${encodeURIComponent(redirectUri)}` : '';
     const res = await apiClient<{ url: string; state: string }>(
-      `/stores/${storeId}/social/connect-url`,
+      `/stores/${storeId}/social/connect-url${query}`,
       { storeId },
     );
     return res.url;

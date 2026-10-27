@@ -48,7 +48,8 @@ export function SocialAccountsModal() {
     if (!activeStore?.id) return;
     setActionError(null);
     try {
-      const url = await getConnectUrl(activeStore.id);
+      const redirectUri = `${window.location.origin}/auth/callback/facebook`;
+      const url = await getConnectUrl(activeStore.id, redirectUri);
       window.location.href = url;
     } catch (err: any) {
       setActionError(err.message || 'Failed to initiate Facebook OAuth');

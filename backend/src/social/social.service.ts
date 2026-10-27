@@ -30,7 +30,10 @@ export class SocialService {
   /**
    * Generates Facebook OAuth URL for a store.
    */
-  async getConnectUrl(storeId: string): Promise<{ url: string; state: string }> {
+  async getConnectUrl(
+    storeId: string,
+    redirectUri?: string,
+  ): Promise<{ url: string; state: string }> {
     const store = await this.prisma.store.findUnique({
       where: { id: storeId },
     });
@@ -39,7 +42,7 @@ export class SocialService {
     }
 
     const state = `postmind_${storeId}_${Date.now()}`;
-    const url = this.metaGraphService.getAuthUrl(storeId, state);
+    const url = this.metaGraphService.getAuthUrl(storeId, state, redirectUri);
 
     return { url, state };
   }

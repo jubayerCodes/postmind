@@ -17,10 +17,32 @@ function FacebookCallbackContent() {
 
   React.useEffect(() => {
     async function processCallback() {
+      const errorParam = searchParams.get('error') || searchParams.get('error_description');
+      if (errorParam) {
+        setStatus('error');
+        setErrorMessage(
+          searchParams.get('error_description') ||
+            searchParams.get('error_reason') ||
+            'Facebook authorization was cancelled or denied.',
+        );
+        return;
+      }
+
       const code = searchParams.get('code');
       const devMode = searchParams.get('dev_mode');
       const storeIdParam = searchParams.get('store_id');
-      const storeId = storeIdParam || activeStore?.id;
+      const stateParam = searchParams.get('state');
+
+      // Extract storeId from OAuth state if present (format: postmind_<storeId>_<timestamp>)
+      let stateStoreId: string | null = null;
+      if (stateParam && stateParam.startsWith('postmind_')) {
+        const parts = stateParam.split('_');
+        if (parts.length >= 2) {
+          stateStoreId = parts[1];
+        }
+      }
+
+      const storeId = storeIdParam || stateStoreId || activeStore?.id;
 
       if (!storeId) {
         setStatus('error');
@@ -34,7 +56,8 @@ function FacebookCallbackContent() {
           await connectDevAccount(storeId);
         } else {
           // Real Meta OAuth code exchange
-          await handleOAuthCallback(storeId, code);
+          const redirectUri = `${window.location.origin}/auth/callback/facebook`;
+          await handleOAuthCallback(storeId, code, redirectUri);
         }
 
         setStatus('success');
