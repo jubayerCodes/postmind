@@ -50,7 +50,7 @@ interface SocialState {
     storeId: string,
     code: string,
     redirectUri?: string,
-  ) => Promise<void>;
+  ) => Promise<SocialAccountItem[]>;
 }
 
 export const useSocialStore = create<SocialState>((set, get) => ({
@@ -250,6 +250,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
           res.accounts.length > 0 ? res.accounts[0].id : null,
         isConnecting: false,
       });
+      return res.accounts;
     } catch (err: any) {
       set({
         error: err.message || 'Facebook authorization failed',
