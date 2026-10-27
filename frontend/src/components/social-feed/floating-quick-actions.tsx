@@ -18,9 +18,11 @@ export function FloatingQuickActions({
 }: FloatingQuickActionsProps) {
   const {
     currentTone: storeTone,
+    currentLanguage,
     isGenerating,
     customPrompt,
     setTone,
+    setLanguage,
     setCustomPrompt,
     generatePost,
   } = useContentStore();
@@ -33,6 +35,23 @@ export function FloatingQuickActions({
 
   const activeTone = propTone || storeTone;
 
+  const handleLanguageClick = async (lang: 'en' | 'bn') => {
+    if (isGenerating || currentLanguage === lang) return;
+    setLanguage(lang);
+    if (activeStore?.id) {
+      try {
+        await generatePost(activeStore.id, {
+          productId: selectedProduct?.id,
+          tone: activeTone,
+          language: lang,
+          customPrompt: promptInput.trim() || customPrompt || undefined,
+        });
+      } catch (err) {
+        console.warn('Language switch generation error:', err);
+      }
+    }
+  };
+
   const handleToneClick = async (tone: 'natural' | 'witty' | 'promo' | 'storytelling') => {
     if (isGenerating) return;
     setTone(tone);
@@ -43,6 +62,7 @@ export function FloatingQuickActions({
         await generatePost(activeStore.id, {
           productId: selectedProduct?.id,
           tone,
+          language: currentLanguage,
           customPrompt: promptInput.trim() || customPrompt || undefined,
         });
       } catch (err) {
@@ -60,6 +80,7 @@ export function FloatingQuickActions({
       await generatePost(activeStore.id, {
         productId: selectedProduct?.id,
         tone: activeTone,
+        language: currentLanguage,
         customPrompt: promptInput.trim() || undefined,
       });
       setIsPromptExpanded(false);
@@ -160,16 +181,50 @@ export function FloatingQuickActions({
               </button>
             </form>
           ) : (
-            <div className="flex justify-center">
+            <div className="flex items-center justify-between gap-2 w-full px-0.5">
               <button
                 type="button"
                 onClick={() => setIsPromptExpanded(true)}
-                className="px-3 py-1 rounded-full text-[11px] font-medium border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] backdrop-blur-md shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:border-[var(--brand-primary)]"
+                className="px-3 py-1 rounded-full text-[11px] font-medium border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] backdrop-blur-md shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer hover:border-[var(--brand-primary)]"
               >
                 <Sparkles className="w-3 h-3 text-[var(--brand-primary)]" />
                 <span>Give AI Custom Instructions...</span>
                 <ChevronUp className="w-3 h-3 text-[var(--text-secondary)]" />
               </button>
+
+              {/* Segmented Pill: English | বাংলা */}
+              <div
+                role="group"
+                aria-label="Language selection"
+                className="inline-flex items-center p-0.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 backdrop-blur-md shadow-2xs text-[11px] font-medium select-none"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleLanguageClick('en')}
+                  disabled={isGenerating}
+                  className={cn(
+                    'px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer disabled:opacity-50',
+                    currentLanguage === 'en'
+                      ? 'bg-[var(--brand-primary)] text-white font-semibold shadow-xs'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                  )}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLanguageClick('bn')}
+                  disabled={isGenerating}
+                  className={cn(
+                    'px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer disabled:opacity-50',
+                    currentLanguage === 'bn'
+                      ? 'bg-[var(--brand-primary)] text-white font-semibold shadow-xs'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                  )}
+                >
+                  বাংলা
+                </button>
+              </div>
             </div>
           )}
         </div>

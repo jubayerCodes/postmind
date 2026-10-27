@@ -13,4 +13,8 @@ export class RegeneratePostDto {
   @IsString()
   @IsOptional()
   offerDetails?: string;
+
+  @IsString()
+  @IsOptional()
+  language?: string;
 }

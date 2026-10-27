@@ -22,6 +22,7 @@ export class ContentService {
         tone: dto.tone ?? ContentTone.NATURAL,
         status: dto.status ?? ContentStatus.READY,
         scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
+        language: dto.language ?? 'en',
       },
       include: {
         product: true,
@@ -97,6 +98,7 @@ export class ContentService {
     if (dto.postType !== undefined) data.postType = dto.postType;
     if (dto.tone !== undefined) data.tone = dto.tone;
     if (dto.status !== undefined) data.status = dto.status;
+    if (dto.language !== undefined) data.language = dto.language;
     if (dto.scheduledAt !== undefined) {
       data.scheduledAt = dto.scheduledAt ? new Date(dto.scheduledAt) : null;
     }

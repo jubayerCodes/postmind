@@ -47,4 +47,8 @@ export class CreateContentDto {
   @IsString()
   @IsOptional()
   scheduledAt?: string;
+
+  @IsString()
+  @IsOptional()
+  language?: string;
 }

@@ -82,6 +82,7 @@ export class SocialService {
         },
         update: {
           accountName: page.accountName,
+          avatarUrl: page.avatarUrl || null,
           encryptedAccessToken: encryptedToken,
           status: SocialConnectionStatus.CONNECTED,
           tokenExpiresAt: null,
@@ -91,6 +92,7 @@ export class SocialService {
           platform: SocialPlatform.META_FACEBOOK,
           platformAccountId: page.platformAccountId,
           accountName: page.accountName,
+          avatarUrl: page.avatarUrl || null,
           encryptedAccessToken: encryptedToken,
           status: SocialConnectionStatus.CONNECTED,
         },
@@ -100,6 +102,7 @@ export class SocialService {
           platform: true,
           platformAccountId: true,
           accountName: true,
+          avatarUrl: true,
           status: true,
           tokenExpiresAt: true,
           createdAt: true,
@@ -131,6 +134,9 @@ export class SocialService {
       dto?.platformAccountId || `dev_sandbox_page_${storeId}`;
     const pageName =
       dto?.pageName || `${store.name} (Official Facebook Page)`;
+    const avatarUrl =
+      dto?.avatarUrl ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(store.name || pageName)}&background=1877F2&color=fff&size=160&bold=true`;
     const mockToken = `dev_mock_token_${storeId}_${Date.now()}`;
     const encryptedToken = this.cryptoService.encrypt(mockToken);
 
@@ -144,6 +150,7 @@ export class SocialService {
       },
       update: {
         accountName: pageName,
+        avatarUrl,
         encryptedAccessToken: encryptedToken,
         status: SocialConnectionStatus.CONNECTED,
         tokenExpiresAt: null,
@@ -153,6 +160,7 @@ export class SocialService {
         platform: SocialPlatform.META_FACEBOOK,
         platformAccountId,
         accountName: pageName,
+        avatarUrl,
         encryptedAccessToken: encryptedToken,
         status: SocialConnectionStatus.CONNECTED,
       },
@@ -162,6 +170,7 @@ export class SocialService {
         platform: true,
         platformAccountId: true,
         accountName: true,
+        avatarUrl: true,
         status: true,
         tokenExpiresAt: true,
         createdAt: true,
@@ -185,6 +194,7 @@ export class SocialService {
         platform: true,
         platformAccountId: true,
         accountName: true,
+        avatarUrl: true,
         status: true,
         tokenExpiresAt: true,
         createdAt: true,
@@ -311,6 +321,7 @@ export class SocialService {
           publishedAt: publishResult.publishedAt,
           platformPostId: publishResult.platformPostId,
           publishError: null,
+          metricsLastSyncedAt: new Date(),
         },
         include: { product: true },
       });
@@ -334,5 +345,89 @@ export class SocialService {
 
       throw new BadRequestException(`Facebook publishing failed: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Syncs latest engagement metrics (reactions, comments, shares) from Meta Graph API for a published post.
+   */
+  async syncPostMetrics(
+    storeId: string,
+    contentId: string,
+  ): Promise<{
+    likesCount: number;
+    commentsCount: number;
+    sharesCount: number;
+    metricsLastSyncedAt: Date;
+    content: any;
+  }> {
+    const content = await this.prisma.content.findFirst({
+      where: { id: contentId, storeId },
+      include: { product: true },
+    });
+
+    if (!content) {
+      throw new NotFoundException(
+        `Content post with ID '${contentId}' not found in this store`,
+      );
+    }
+
+    if (!content.platformPostId || content.status !== ContentStatus.PUBLISHED) {
+      return {
+        likesCount: content.likesCount || 0,
+        commentsCount: content.commentsCount || 0,
+        sharesCount: content.sharesCount || 0,
+        metricsLastSyncedAt: content.metricsLastSyncedAt || new Date(),
+        content,
+      };
+    }
+
+    const account = await this.prisma.socialAccount.findFirst({
+      where: {
+        storeId,
+        platform: SocialPlatform.META_FACEBOOK,
+        status: SocialConnectionStatus.CONNECTED,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!account || !account.encryptedAccessToken) {
+      throw new BadRequestException(
+        'No connected Facebook Page found for this store to sync metrics',
+      );
+    }
+
+    let decryptedToken: string;
+    try {
+      decryptedToken = this.cryptoService.decrypt(account.encryptedAccessToken);
+    } catch (err) {
+      this.logger.error('Token decryption failed during metrics sync', err);
+      throw new BadRequestException('Invalid or expired social token');
+    }
+
+    const metrics = await this.metaGraphService.getMetrics(
+      account,
+      decryptedToken,
+      content.platformPostId,
+    );
+
+    const now = new Date();
+    const updatedContent = await this.prisma.content.update({
+      where: { id: contentId },
+      data: {
+        likesCount: metrics.likesCount,
+        commentsCount: metrics.commentsCount,
+        sharesCount: metrics.sharesCount,
+        metricsLastSyncedAt: now,
+      },
+      include: { product: true },
+    });
+
+    return {
+      likesCount: metrics.likesCount,
+      commentsCount: metrics.commentsCount,
+      sharesCount: metrics.sharesCount,
+      metricsLastSyncedAt: now,
+      content: updatedContent,
+    };
   }
 }

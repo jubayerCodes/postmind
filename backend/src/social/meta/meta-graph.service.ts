@@ -68,6 +68,7 @@ export class MetaGraphService implements SocialPlatformProvider {
           accessToken: `dev_mock_page_token_${Date.now()}`,
           category: 'Clothing (Brand)',
           tasks: ['MANAGE', 'CREATE_CONTENT', 'MODERATE'],
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
         },
       ];
     }
@@ -92,8 +93,8 @@ export class MetaGraphService implements SocialPlatformProvider {
         userToken = longLivedData.access_token || shortLivedToken;
       }
 
-      // 3. Fetch user's managed Facebook Pages and their respective Page Access Tokens
-      const accountsUrl = `${this.graphApiBase}/me/accounts?fields=id,name,category,access_token,tasks&access_token=${userToken}`;
+      // 3. Fetch user's managed Facebook Pages, Page Tokens, and Page Profile Pictures
+      const accountsUrl = `${this.graphApiBase}/me/accounts?fields=id,name,category,access_token,tasks,picture.type(large){url}&access_token=${userToken}`;
       const accountsRes = await fetch(accountsUrl);
       if (!accountsRes.ok) {
         const err = await accountsRes.text().catch(() => '');
@@ -113,6 +114,7 @@ export class MetaGraphService implements SocialPlatformProvider {
         accessToken: page.access_token,
         category: page.category,
         tasks: page.tasks || [],
+        avatarUrl: page.picture?.data?.url || null,
       }));
     } catch (error) {
       this.logger.error('Meta OAuth exchange error', error);

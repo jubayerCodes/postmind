@@ -8,6 +8,7 @@ export interface SocialAccountItem {
   platform: 'META_FACEBOOK' | 'INSTAGRAM';
   platformAccountId: string;
   accountName: string;
+  avatarUrl?: string | null;
   status: 'CONNECTED' | 'EXPIRED' | 'DISCONNECTED';
   tokenExpiresAt?: string | null;
   createdAt: string;
@@ -20,6 +21,7 @@ interface SocialState {
   isLoading: boolean;
   isConnecting: boolean;
   isPublishing: boolean;
+  isSyncingMetrics: boolean;
   isModalOpen: boolean;
   error: string | null;
   lastPublishedPost: {
@@ -34,6 +36,7 @@ interface SocialState {
   connectDevAccount: (
     storeId: string,
     pageName?: string,
+    avatarUrl?: string,
   ) => Promise<SocialAccountItem>;
   disconnectAccount: (storeId: string, accountId: string) => Promise<void>;
   publishPost: (
@@ -44,6 +47,16 @@ interface SocialState {
     success: boolean;
     content: any;
     publishResult: { platformPostId: string; permalinkUrl?: string; publishedAt: string };
+  }>;
+  syncPostMetrics: (
+    storeId: string,
+    contentId: string,
+  ) => Promise<{
+    likesCount: number;
+    commentsCount: number;
+    sharesCount: number;
+    metricsLastSyncedAt: string;
+    content: any;
   }>;
   getConnectUrl: (storeId: string, redirectUri?: string) => Promise<string>;
   handleOAuthCallback: (
@@ -59,6 +72,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
   isLoading: false,
   isConnecting: false,
   isPublishing: false,
+  isSyncingMetrics: false,
   isModalOpen: false,
   error: null,
   lastPublishedPost: null,
@@ -101,7 +115,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     }
   },
 
-  connectDevAccount: async (storeId: string, pageName?: string) => {
+  connectDevAccount: async (storeId: string, pageName?: string, avatarUrl?: string) => {
     set({ isConnecting: true, error: null });
     try {
       const res = await apiClient<{
@@ -110,7 +124,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
       }>(`/stores/${storeId}/social/dev-connect`, {
         method: 'POST',
         storeId,
-        body: JSON.stringify({ pageName }),
+        body: JSON.stringify({ pageName, avatarUrl }),
       });
 
       const newAccount = res.account;
@@ -214,6 +228,39 @@ export const useSocialStore = create<SocialState>((set, get) => ({
       set({
         error: err.message || 'Failed to publish post to Facebook',
         isPublishing: false,
+      });
+      throw err;
+    }
+  },
+
+  syncPostMetrics: async (storeId: string, contentId: string) => {
+    set({ isSyncingMetrics: true, error: null });
+    try {
+      const res = await apiClient<{
+        likesCount: number;
+        commentsCount: number;
+        sharesCount: number;
+        metricsLastSyncedAt: string;
+        content: any;
+      }>(`/stores/${storeId}/social/metrics/${contentId}/sync`, {
+        method: 'POST',
+        storeId,
+      });
+
+      // Synchronize updated metrics to contentStore
+      useContentStore.getState().updateMetrics(contentId, {
+        likesCount: res.likesCount,
+        commentsCount: res.commentsCount,
+        sharesCount: res.sharesCount,
+        metricsLastSyncedAt: res.metricsLastSyncedAt,
+      });
+
+      set({ isSyncingMetrics: false });
+      return res;
+    } catch (err: any) {
+      set({
+        error: err.message || 'Failed to sync post metrics from Facebook',
+        isSyncingMetrics: false,
       });
       throw err;
     }

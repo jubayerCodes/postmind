@@ -64,9 +64,11 @@ export default function DashboardPage() {
     accounts,
     selectedAccountId,
     isPublishing,
+    isSyncingMetrics,
     setModalOpen,
     fetchAccounts,
     publishPost,
+    syncPostMetrics,
   } = useSocialStore();
 
   const { openScheduleModal } = useCalendarStore();
@@ -154,9 +156,9 @@ export default function DashboardPage() {
     postType: (currentPost?.postType as any) || 'PRODUCT_SHOWCASE',
     status: (currentPost?.status as any) || 'READY',
     platform: 'META_FACEBOOK',
-    likesCount: 2480,
-    commentsCount: 142,
-    sharesCount: 56,
+    likesCount: currentPost?.likesCount ?? 0,
+    commentsCount: currentPost?.commentsCount ?? 0,
+    sharesCount: currentPost?.sharesCount ?? 0,
     image: displayProduct?.image || '',
     tone: currentTone,
   };
@@ -198,6 +200,43 @@ export default function DashboardPage() {
     accounts.find((a) => a.id === selectedAccountId) ||
     accounts[0] ||
     null;
+
+  const pageAvatarUrl =
+    activeConnectedAccount?.avatarUrl ||
+    (activeConnectedAccount?.platformAccountId &&
+    !activeConnectedAccount.platformAccountId.startsWith('dev_')
+      ? `https://graph.facebook.com/${activeConnectedAccount.platformAccountId}/picture?type=large`
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          activeConnectedAccount?.accountName || activeStore?.name || 'Store',
+        )}&background=1877F2&color=fff&size=160&bold=true`);
+
+  // Auto-sync metrics from Meta Graph API when viewing a published post
+  const lastSyncedContentIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (
+      !activeStore?.id ||
+      !currentPost?.id ||
+      currentPost.status !== 'PUBLISHED' ||
+      currentPost.id.startsWith('post-') ||
+      currentPost.id === lastSyncedContentIdRef.current
+    ) {
+      return;
+    }
+
+    lastSyncedContentIdRef.current = currentPost.id;
+    syncPostMetrics(activeStore.id, currentPost.id).catch((err) => {
+      console.warn('Auto-sync post metrics error:', err);
+    });
+  }, [activeStore?.id, currentPost?.id, currentPost?.status, syncPostMetrics]);
+
+  const handleManualSyncMetrics = async () => {
+    if (!activeStore?.id || !currentPost?.id || currentPost.status !== 'PUBLISHED') return;
+    try {
+      await syncPostMetrics(activeStore.id, currentPost.id);
+    } catch (err) {
+      console.warn('Manual post metrics sync error:', err);
+    }
+  };
 
   const handlePublishToFacebook = async () => {
     if (!activeStore?.id) return;
@@ -452,6 +491,10 @@ export default function DashboardPage() {
                     activeStore?.name ||
                     'Store'
                   }
+                  pageAvatarUrl={pageAvatarUrl}
+                  onSyncMetrics={handleManualSyncMetrics}
+                  isSyncingMetrics={isSyncingMetrics}
+                  metricsLastSyncedAt={currentPost?.metricsLastSyncedAt || null}
                 />
               ) : (
                 <div className="max-w-md w-full p-8 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-center flex flex-col items-center shadow-xs">

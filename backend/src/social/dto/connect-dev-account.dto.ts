@@ -8,4 +8,8 @@ export class ConnectDevAccountDto {
   @IsOptional()
   @IsString()
   platformAccountId?: string;
+
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
 }

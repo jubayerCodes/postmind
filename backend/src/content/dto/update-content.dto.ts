@@ -39,4 +39,8 @@ export class UpdateContentDto {
   @IsString()
   @IsOptional()
   scheduledAt?: string;
+
+  @IsString()
+  @IsOptional()
+  language?: string;
 }

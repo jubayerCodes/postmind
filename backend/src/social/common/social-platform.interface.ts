@@ -6,6 +6,7 @@ export interface ConnectedPageAccount {
   accessToken: string;
   category?: string;
   tasks?: string[];
+  avatarUrl?: string | null;
 }
 
 export interface PublishPostPayload {

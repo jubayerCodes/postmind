@@ -27,4 +27,8 @@ export class GeneratePostDto {
   @IsString()
   @IsOptional()
   offerDetails?: string;
+
+  @IsString()
+  @IsOptional()
+  language?: string = 'en';
 }

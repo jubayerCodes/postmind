@@ -81,4 +81,21 @@ export class SocialController {
       dto?.socialAccountId,
     );
   }
+
+  @Get('metrics/:contentId')
+  async getPostMetrics(
+    @Param('storeId') storeId: string,
+    @Param('contentId') contentId: string,
+  ) {
+    return this.socialService.syncPostMetrics(storeId, contentId);
+  }
+
+  @Post('metrics/:contentId/sync')
+  @HttpCode(HttpStatus.OK)
+  async syncPostMetrics(
+    @Param('storeId') storeId: string,
+    @Param('contentId') contentId: string,
+  ) {
+    return this.socialService.syncPostMetrics(storeId, contentId);
+  }
 }

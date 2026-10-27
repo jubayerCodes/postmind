@@ -28,6 +28,11 @@ export interface ContentItem {
   publishedAt?: string | null;
   platformPostId?: string | null;
   publishError?: string | null;
+  language?: string | null;
+  likesCount?: number;
+  commentsCount?: number;
+  sharesCount?: number;
+  metricsLastSyncedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   product?: {
@@ -59,6 +64,7 @@ interface ContentState {
   isLoadingList: boolean;
   error: string | null;
   currentTone: 'natural' | 'witty' | 'promo' | 'storytelling';
+  currentLanguage: 'en' | 'bn';
   customPrompt: string;
   suggestedTime: string;
 
@@ -68,6 +74,7 @@ interface ContentState {
     options: {
       productId?: string;
       tone?: 'natural' | 'witty' | 'promo' | 'storytelling';
+      language?: 'en' | 'bn';
       customPrompt?: string;
       offerDetails?: string;
     },
@@ -77,11 +84,22 @@ interface ContentState {
     contentId?: string,
     options?: {
       tone?: 'natural' | 'witty' | 'promo' | 'storytelling';
+      language?: 'en' | 'bn';
       customPrompt?: string;
       offerDetails?: string;
     },
   ) => Promise<ContentItem>;
   setTone: (tone: 'natural' | 'witty' | 'promo' | 'storytelling') => void;
+  setLanguage: (lang: 'en' | 'bn') => void;
+  updateMetrics: (
+    contentId: string,
+    metrics: {
+      likesCount: number;
+      commentsCount: number;
+      sharesCount: number;
+      metricsLastSyncedAt: string;
+    },
+  ) => void;
   setCustomPrompt: (prompt: string) => void;
   updateCurrentCaption: (caption: string) => void;
   updateCurrentHeadline: (headline: string) => void;
@@ -104,6 +122,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   isLoadingList: false,
   error: null,
   currentTone: 'natural',
+  currentLanguage: 'en',
   customPrompt: '',
   suggestedTime: '8:00 PM',
 
@@ -121,6 +140,19 @@ export const useContentStore = create<ContentState>((set, get) => ({
     }),
 
   setTone: (tone) => set({ currentTone: tone }),
+
+  setLanguage: (lang) => set({ currentLanguage: lang }),
+
+  updateMetrics: (contentId, metrics) =>
+    set((state) => ({
+      currentPost:
+        state.currentPost?.id === contentId
+          ? { ...state.currentPost, ...metrics }
+          : state.currentPost,
+      savedPosts: state.savedPosts.map((p) =>
+        p.id === contentId ? { ...p, ...metrics } : p,
+      ),
+    })),
 
   setCustomPrompt: (prompt) => set({ customPrompt: prompt }),
 
@@ -145,6 +177,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
     set({ isGenerating: true, error: null });
 
     const selectedTone = options.tone || get().currentTone;
+    const selectedLanguage = options.language || get().currentLanguage;
     const toneUpper = selectedTone.toUpperCase();
 
     try {
@@ -156,6 +189,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         body: JSON.stringify({
           productId: options.productId || undefined,
           tone: toneUpper,
+          language: selectedLanguage,
           customPrompt: options.customPrompt ?? get().customPrompt ?? undefined,
           offerDetails: options.offerDetails || undefined,
         }),
@@ -165,6 +199,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         currentPost: response.content,
         suggestedTime: response.aiOutput.suggestedPublishTime || '8:00 PM',
         currentTone: selectedTone,
+        currentLanguage: selectedLanguage,
         isGenerating: false,
       });
 
@@ -191,6 +226,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
     set({ isRegenerating: true, error: null });
 
     const selectedTone = options.tone || get().currentTone;
+    const selectedLanguage = options.language || get().currentLanguage;
     const toneUpper = selectedTone.toUpperCase();
 
     try {
@@ -201,6 +237,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         method: 'POST',
         body: JSON.stringify({
           tone: toneUpper,
+          language: selectedLanguage,
           customPrompt: options.customPrompt ?? get().customPrompt ?? undefined,
           offerDetails: options.offerDetails || undefined,
         }),
@@ -210,6 +247,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         currentPost: response.content,
         suggestedTime: response.aiOutput.suggestedPublishTime || get().suggestedTime,
         currentTone: selectedTone,
+        currentLanguage: selectedLanguage,
         isRegenerating: false,
       });
 

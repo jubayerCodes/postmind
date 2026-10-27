@@ -27,10 +27,14 @@ interface SocialPostCardProps {
   onLikeToggle?: () => void;
   isGenerating?: boolean;
   storeName?: string;
+  pageAvatarUrl?: string | null;
   onRegeneratePost?: () => void;
   isRegeneratingPost?: boolean;
   onRegenerateImage?: () => Promise<void> | void;
   isRegeneratingImage?: boolean;
+  onSyncMetrics?: () => Promise<void> | void;
+  isSyncingMetrics?: boolean;
+  metricsLastSyncedAt?: string | null;
 }
 
 export function SocialPostCard({
@@ -39,10 +43,14 @@ export function SocialPostCard({
   onEditCaption,
   isGenerating = false,
   storeName = 'My Store',
+  pageAvatarUrl,
   onRegeneratePost,
   isRegeneratingPost = false,
   onRegenerateImage,
   isRegeneratingImage = false,
+  onSyncMetrics,
+  isSyncingMetrics = false,
+  metricsLastSyncedAt,
 }: SocialPostCardProps) {
   const [likes, setLikes] = React.useState(post.likesCount);
   const [isLiked, setIsLiked] = React.useState(false);
@@ -96,8 +104,20 @@ export function SocialPostCard({
       {/* Social Card Header */}
       <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]/30">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-md bg-[var(--brand-primary)] text-white flex items-center justify-center text-xs font-bold shrink-0">
-            {storeName.slice(0, 2).toUpperCase()}
+          <div className="w-8 h-8 rounded-md bg-[var(--brand-primary)] text-white flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden border border-[var(--border-subtle)] relative">
+            {pageAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={pageAvatarUrl}
+                alt={storeName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <span>{storeName.slice(0, 2).toUpperCase()}</span>
+            )}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
@@ -282,6 +302,11 @@ export function SocialPostCard({
           <div className="flex items-center gap-4">
             <button
               onClick={handleLike}
+              title={
+                post.status === 'PUBLISHED'
+                  ? 'Reactions from Meta Facebook Page'
+                  : 'Reactions will sync live once published to Facebook'
+              }
               className={cn(
                 'flex items-center gap-1.5 transition-colors cursor-pointer',
                 isLiked
@@ -290,20 +315,66 @@ export function SocialPostCard({
               )}
             >
               <Heart className={cn('w-3.5 h-3.5', isLiked && 'fill-current')} />
-              <span className="font-mono text-xs">{likes.toLocaleString()}</span>
+              <span className="font-mono text-xs">
+                {post.status === 'PUBLISHED' ? likes.toLocaleString() : '--'}
+              </span>
             </button>
-            <button className="flex items-center gap-1.5 hover:text-[var(--text-primary)] transition-colors cursor-pointer">
+            <button
+              title={
+                post.status === 'PUBLISHED'
+                  ? 'Comments from Meta Facebook Page'
+                  : 'Comments will sync live once published to Facebook'
+              }
+              className="flex items-center gap-1.5 hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+            >
               <MessageCircle className="w-3.5 h-3.5" />
-              <span className="font-mono text-xs">{post.commentsCount}</span>
+              <span className="font-mono text-xs">
+                {post.status === 'PUBLISHED' ? (post.commentsCount ?? 0) : '--'}
+              </span>
             </button>
-            <button className="flex items-center gap-1.5 hover:text-[var(--text-primary)] transition-colors cursor-pointer">
+            <button
+              title={
+                post.status === 'PUBLISHED'
+                  ? 'Shares from Meta Facebook Page'
+                  : 'Shares will sync live once published to Facebook'
+              }
+              className="flex items-center gap-1.5 hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+            >
               <Share2 className="w-3.5 h-3.5" />
-              <span className="font-mono text-xs">{post.sharesCount}</span>
+              <span className="font-mono text-xs">
+                {post.status === 'PUBLISHED' ? (post.sharesCount ?? 0) : '--'}
+              </span>
             </button>
           </div>
 
-          <div className="text-[10px] text-[var(--text-secondary)] font-mono">
-            Meta Graph API
+          <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] font-mono">
+            {post.status === 'PUBLISHED' && onSyncMetrics && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onSyncMetrics()}
+                  disabled={isSyncingMetrics}
+                  title={
+                    metricsLastSyncedAt
+                      ? `Synced ${new Date(metricsLastSyncedAt).toLocaleTimeString()} • Refresh from Meta Graph API`
+                      : 'Sync live engagement from Meta Graph API'
+                  }
+                  className="inline-flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={cn(
+                      'w-3 h-3',
+                      isSyncingMetrics && 'animate-spin text-[var(--brand-primary)]',
+                    )}
+                  />
+                  <span>{isSyncingMetrics ? 'Syncing...' : 'Sync'}</span>
+                </button>
+                <span>•</span>
+              </>
+            )}
+            <span>
+              {post.status === 'PUBLISHED' ? 'Meta Graph API' : 'Meta Graph API (On Publish)'}
+            </span>
           </div>
         </div>
 

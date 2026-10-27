@@ -119,6 +119,11 @@ model Content {
   publishedAt    DateTime?
   platformPostId String?
   publishError   String?       @db.Text
+  language       String        @default("en")
+  likesCount     Int           @default(0)
+  commentsCount  Int           @default(0)
+  sharesCount    Int           @default(0)
+  metricsLastSyncedAt DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -151,6 +156,7 @@ model SocialAccount {
   platform             SocialPlatform
   platformAccountId    String
   accountName          String
+  avatarUrl            String?
   encryptedAccessToken String?                @db.Text
   status               SocialConnectionStatus @default(CONNECTED)
   tokenExpiresAt       DateTime?
