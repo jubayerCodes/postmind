@@ -327,7 +327,7 @@ export function SocialPostCard({
             >
               <Heart className={cn('w-3.5 h-3.5', isLiked && 'fill-current')} />
               <span className="font-mono text-xs">
-                {post.status === 'PUBLISHED' ? Number(likes || 0).toLocaleString() : '--'}
+                {Number(likes || 0).toLocaleString()}
               </span>
             </button>
             <button
@@ -340,7 +340,7 @@ export function SocialPostCard({
             >
               <MessageCircle className="w-3.5 h-3.5" />
               <span className="font-mono text-xs">
-                {post.status === 'PUBLISHED' ? Number(post.commentsCount || 0).toLocaleString() : '--'}
+                {Number(post.commentsCount || 0).toLocaleString()}
               </span>
             </button>
             <button
@@ -353,7 +353,7 @@ export function SocialPostCard({
             >
               <Share2 className="w-3.5 h-3.5" />
               <span className="font-mono text-xs">
-                {post.status === 'PUBLISHED' ? Number(post.sharesCount || 0).toLocaleString() : '--'}
+                {Number(post.sharesCount || 0).toLocaleString()}
               </span>
             </button>
           </div>
