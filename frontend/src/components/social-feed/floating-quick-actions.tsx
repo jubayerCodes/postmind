@@ -38,8 +38,11 @@ export function FloatingQuickActions({
 
   const activeTone = propTone || storeTone;
 
+  const isLocked =
+    currentPost?.status === 'PUBLISHED' || currentPost?.status === 'APPROVED';
+
   const handleLanguageClick = async (lang: 'en' | 'bn') => {
-    if (isGenerating || isRegenerating || currentLanguage === lang) return;
+    if (isGenerating || isRegenerating || currentLanguage === lang || isLocked) return;
     setLanguage(lang);
     if (activeStore?.id) {
       try {
@@ -73,7 +76,7 @@ export function FloatingQuickActions({
   };
 
   const handleToneClick = async (tone: 'natural' | 'witty' | 'promo' | 'storytelling') => {
-    if (isGenerating || isRegenerating) return;
+    if (isGenerating || isRegenerating || isLocked) return;
     setTone(tone);
     if (onSelectTone) onSelectTone(tone);
 
@@ -110,7 +113,7 @@ export function FloatingQuickActions({
 
   const handlePromptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeStore?.id || isGenerating || isRegenerating) return;
+    if (!activeStore?.id || isGenerating || isRegenerating || isLocked) return;
 
     const trimmedPrompt = promptInput.trim();
     setCustomPrompt(trimmedPrompt);
@@ -200,122 +203,140 @@ export function FloatingQuickActions({
 
       {/* 2. Floating AI Control Dock */}
       <div className="absolute bottom-5 inset-x-0 z-30 flex flex-col items-center px-4 pointer-events-none gap-2">
-        {/* Custom AI Instruction Bar */}
-        <div className="pointer-events-auto max-w-lg w-full">
-          {isPromptExpanded ? (
-            <form
-              onSubmit={handlePromptSubmit}
-              className="p-2 rounded-lg bg-[var(--bg-card)]/95 backdrop-blur-xl border border-[var(--border-subtle)] shadow-xl flex items-center gap-2 animate-in fade-in-0 zoom-in-95 duration-150"
-            >
-              <input
-                type="text"
-                autoFocus
-                placeholder="Custom instruction (e.g. Focus on Eid festive delivery, highlight 20% discount)..."
-                value={promptInput}
-                onChange={(e) => setPromptInput(e.target.value)}
-                className="flex-1 px-3 py-1.5 text-xs rounded-md border border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]"
-              />
-              <button
-                type="submit"
-                disabled={isGenerating}
-                className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--brand-primary)] text-white hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Send className="w-3.5 h-3.5" />
-                )}
-                <span>Generate</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsPromptExpanded(false)}
-                className="px-2 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-              >
-                Close
-              </button>
-            </form>
-          ) : (
-            <div className="flex items-center justify-between gap-2 w-full px-0.5">
-              <button
-                type="button"
-                onClick={() => setIsPromptExpanded(true)}
-                className="px-3 py-1 rounded-full text-[11px] font-medium border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] backdrop-blur-md shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer hover:border-[var(--brand-primary)]"
-              >
-                <Sparkles className="w-3 h-3 text-[var(--brand-primary)]" />
-                <span>Give AI Custom Instructions...</span>
-                <ChevronUp className="w-3 h-3 text-[var(--text-secondary)]" />
-              </button>
-
-              {/* Segmented Pill: English | বাংলা */}
-              <div
-                role="group"
-                aria-label="Language selection"
-                className="inline-flex items-center p-0.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 backdrop-blur-md shadow-2xs text-[11px] font-medium select-none"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleLanguageClick('en')}
-                  disabled={isGenerating || isRegenerating}
-                  className={cn(
-                    'px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer disabled:opacity-50',
-                    currentLanguage === 'en'
-                      ? 'bg-[var(--brand-primary)] text-white font-semibold shadow-xs'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-                  )}
-                >
-                  English
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleLanguageClick('bn')}
-                  disabled={isGenerating || isRegenerating}
-                  className={cn(
-                    'px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer disabled:opacity-50',
-                    currentLanguage === 'bn'
-                      ? 'bg-[var(--brand-primary)] text-white font-semibold shadow-xs'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-                  )}
-                >
-                  বাংলা
-                </button>
-              </div>
+        {isLocked ? (
+          <div className="pointer-events-auto max-w-lg w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-[var(--bg-card)]/95 backdrop-blur-xl border border-emerald-500/30 shadow-xl text-xs font-medium text-[var(--text-primary)]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>
+                {currentPost?.status === 'PUBLISHED'
+                  ? 'Published to Facebook • Content is locked'
+                  : 'Post is approved • Content is locked'}
+              </span>
             </div>
-          )}
-        </div>
-
-        {/* Tone Selector Buttons */}
-        <nav
-          className="pointer-events-auto max-w-lg w-full p-1.5 rounded-xl bg-[var(--bg-card)]/95 backdrop-blur-xl border border-[var(--border-subtle)] shadow-xl shadow-black/5 dark:shadow-black/60 transition-all"
-          aria-label="Tone modifiers"
-        >
-          <div className="grid grid-cols-4 gap-1.5 w-full">
-            {tones.map((btn) => {
-              const Icon = btn.icon;
-              const isActive = activeTone === btn.id;
-              return (
-                <button
-                  key={btn.id}
-                  onClick={() => handleToneClick(btn.id)}
-                  disabled={isGenerating}
-                  className={cn(
-                    'py-2 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer border select-none disabled:opacity-60',
-                    isActive
-                      ? 'bg-[var(--brand-primary)] text-white border-transparent font-semibold shadow-xs'
-                      : 'bg-[var(--bg-hover)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--brand-primary)] hover:bg-[var(--bg-card)]'
-                  )}
-                >
-                  {isGenerating && isActive ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                  )}
-                  <span className="truncate">{btn.label}</span>
-                </button>
-              );
-            })}
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--bg-main)] text-[var(--text-secondary)] border border-[var(--border-subtle)]">
+              Tone: {activeTone}
+            </span>
           </div>
-        </nav>
+        ) : (
+          <>
+            {/* Custom AI Instruction Bar */}
+            <div className="pointer-events-auto max-w-lg w-full">
+              {isPromptExpanded ? (
+                <form
+                  onSubmit={handlePromptSubmit}
+                  className="p-2 rounded-lg bg-[var(--bg-card)]/95 backdrop-blur-xl border border-[var(--border-subtle)] shadow-xl flex items-center gap-2 animate-in fade-in-0 zoom-in-95 duration-150"
+                >
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Custom instruction (e.g. Focus on Eid festive delivery, highlight 20% discount)..."
+                    value={promptInput}
+                    onChange={(e) => setPromptInput(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-xs rounded-md border border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isGenerating}
+                    className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--brand-primary)] text-white hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>Generate</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPromptExpanded(false)}
+                    className="px-2 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </form>
+              ) : (
+                <div className="flex items-center justify-between gap-2 w-full px-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsPromptExpanded(true)}
+                    className="px-3 py-1 rounded-full text-[11px] font-medium border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] backdrop-blur-md shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer hover:border-[var(--brand-primary)]"
+                  >
+                    <Sparkles className="w-3 h-3 text-[var(--brand-primary)]" />
+                    <span>Give AI Custom Instructions...</span>
+                    <ChevronUp className="w-3 h-3 text-[var(--text-secondary)]" />
+                  </button>
+
+                  {/* Segmented Pill: English | বাংলা */}
+                  <div
+                    role="group"
+                    aria-label="Language selection"
+                    className="inline-flex items-center p-0.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 backdrop-blur-md shadow-2xs text-[11px] font-medium select-none"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleLanguageClick('en')}
+                      disabled={isGenerating || isRegenerating}
+                      className={cn(
+                        'px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer disabled:opacity-50',
+                        currentLanguage === 'en'
+                          ? 'bg-[var(--brand-primary)] text-white font-semibold shadow-xs'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                      )}
+                    >
+                      English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleLanguageClick('bn')}
+                      disabled={isGenerating || isRegenerating}
+                      className={cn(
+                        'px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer disabled:opacity-50',
+                        currentLanguage === 'bn'
+                          ? 'bg-[var(--brand-primary)] text-white font-semibold shadow-xs'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                      )}
+                    >
+                      বাংলা
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tone Selector Buttons */}
+            <nav
+              className="pointer-events-auto max-w-lg w-full p-1.5 rounded-xl bg-[var(--bg-card)]/95 backdrop-blur-xl border border-[var(--border-subtle)] shadow-xl shadow-black/5 dark:shadow-black/60 transition-all"
+              aria-label="Tone modifiers"
+            >
+              <div className="grid grid-cols-4 gap-1.5 w-full">
+                {tones.map((btn) => {
+                  const Icon = btn.icon;
+                  const isActive = activeTone === btn.id;
+                  return (
+                    <button
+                      key={btn.id}
+                      onClick={() => handleToneClick(btn.id)}
+                      disabled={isGenerating}
+                      className={cn(
+                        'py-2 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer border select-none disabled:opacity-60',
+                        isActive
+                          ? 'bg-[var(--brand-primary)] text-white border-transparent font-semibold shadow-xs'
+                          : 'bg-[var(--bg-hover)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--brand-primary)] hover:bg-[var(--bg-card)]'
+                      )}
+                    >
+                      {isGenerating && isActive ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Icon className="w-3.5 h-3.5 shrink-0" />
+                      )}
+                      <span className="truncate">{btn.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          </>
+        )}
       </div>
     </>
   );

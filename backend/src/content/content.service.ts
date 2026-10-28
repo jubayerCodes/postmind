@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateContentDto } from './dto/create-content.dto';
 import { UpdateContentDto } from './dto/update-content.dto';
@@ -88,7 +88,20 @@ export class ContentService {
     id: string,
     dto: UpdateContentDto,
   ): Promise<Content> {
-    await this.findOne(storeId, id);
+    const existing = await this.findOne(storeId, id);
+
+    if (existing.status === ContentStatus.PUBLISHED) {
+      if (
+        dto.headline !== undefined ||
+        dto.caption !== undefined ||
+        dto.hashtags !== undefined ||
+        dto.cta !== undefined
+      ) {
+        throw new BadRequestException(
+          'Published posts cannot be edited. Content is already live on Facebook.',
+        );
+      }
+    }
 
     const data: Prisma.ContentUpdateInput = {};
     if (dto.headline !== undefined) data.headline = dto.headline;

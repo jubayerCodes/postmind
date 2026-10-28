@@ -344,11 +344,13 @@ export default function DashboardPage() {
   };
 
   const handleCustomCaption = (newCaption: string) => {
+    if (currentPost?.status === 'PUBLISHED') return;
     updateCurrentCaption(newCaption);
   };
 
   const handleRegeneratePost = async () => {
     if (!activeStore?.id) return;
+    if (currentPost?.status === 'PUBLISHED' || currentPost?.status === 'APPROVED') return;
     try {
       if (
         currentPost?.id &&
@@ -377,6 +379,7 @@ export default function DashboardPage() {
 
   const handleRegenerateImage = async () => {
     if (!activeStore?.id || !activeItem) return;
+    if (currentPost?.status === 'PUBLISHED' || currentPost?.status === 'APPROVED') return;
     setIsRegeneratingImage(true);
     try {
       const activePrompt =

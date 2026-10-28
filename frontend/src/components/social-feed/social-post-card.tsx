@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Share2,
   CheckCircle,
+  Check,
   Sparkles,
   Clock,
   ShoppingBag,
@@ -157,6 +158,10 @@ export function SocialPostCard({
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
               <CheckCircle className="w-3 h-3" /> Published
             </span>
+          ) : post.status === 'APPROVED' ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+              <Check className="w-3 h-3 text-emerald-500" /> Approved
+            </span>
           ) : (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border-subtle)]">
               Ready for Review
@@ -188,64 +193,78 @@ export function SocialPostCard({
                   Post Options
                 </div>
 
-                {/* Regenerate Post Copy */}
-                {onRegeneratePost && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      onRegeneratePost();
-                    }}
-                    disabled={isGenerating || isRegeneratingPost}
-                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-start gap-2.5 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <RefreshCw
-                      className={cn(
-                        'w-3.5 h-3.5 text-[var(--brand-primary)] shrink-0 mt-0.5',
-                        (isGenerating || isRegeneratingPost) && 'animate-spin',
-                      )}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-xs">
-                        {isGenerating || isRegeneratingPost
-                          ? 'Regenerating Post...'
-                          : 'Regenerate Post'}
-                      </div>
-                      <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">
-                        New caption & copy in {post.postType.toLowerCase().replace('_', ' ')} format
-                      </div>
-                    </div>
-                  </button>
-                )}
+                {/* Regenerate Options (Only allowed for DRAFT / READY posts) */}
+                {post.status !== 'PUBLISHED' && post.status !== 'APPROVED' ? (
+                  <>
+                    {/* Regenerate Post Copy */}
+                    {onRegeneratePost && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          onRegeneratePost();
+                        }}
+                        disabled={isGenerating || isRegeneratingPost}
+                        className="w-full px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-start gap-2.5 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <RefreshCw
+                          className={cn(
+                            'w-3.5 h-3.5 text-[var(--brand-primary)] shrink-0 mt-0.5',
+                            (isGenerating || isRegeneratingPost) && 'animate-spin',
+                          )}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-xs">
+                            {isGenerating || isRegeneratingPost
+                              ? 'Regenerating Post...'
+                              : 'Regenerate Post'}
+                          </div>
+                          <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                            New caption & copy in {post.postType.toLowerCase().replace('_', ' ')} format
+                          </div>
+                        </div>
+                      </button>
+                    )}
 
-                {/* Regenerate Product Image */}
-                {onRegenerateImage && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      onRegenerateImage();
-                    }}
-                    disabled={isRegeneratingImage}
-                    className="w-full px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-start gap-2.5 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <ImageIcon
-                      className={cn(
-                        'w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5',
-                        isRegeneratingImage && 'animate-spin',
-                      )}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-xs">
-                        {isRegeneratingImage
-                          ? 'Generating HD Image...'
-                          : 'Regenerate Image'}
-                      </div>
-                      <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">
-                        Create new 1024×1024 studio visual
-                      </div>
-                    </div>
-                  </button>
+                    {/* Regenerate Product Image */}
+                    {onRegenerateImage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          onRegenerateImage();
+                        }}
+                        disabled={isRegeneratingImage}
+                        className="w-full px-3 py-2 text-left text-xs text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-start gap-2.5 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <ImageIcon
+                          className={cn(
+                            'w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5',
+                            isRegeneratingImage && 'animate-spin',
+                          )}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-xs">
+                            {isRegeneratingImage
+                              ? 'Generating HD Image...'
+                              : 'Regenerate Image'}
+                          </div>
+                          <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                            Create new 1024×1024 studio visual
+                          </div>
+                        </div>
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="px-3 py-2 text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5">
+                    <span>🔒</span>
+                    <span>
+                      {post.status === 'PUBLISHED'
+                        ? 'Published post is locked from editing'
+                        : 'Approved post is locked from editing'}
+                    </span>
+                  </div>
                 )}
 
                 <div className="my-1 border-t border-[var(--border-subtle)]/60" />

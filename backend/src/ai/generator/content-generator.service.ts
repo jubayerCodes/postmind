@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { GeneratePostDto, ContentToneEnum } from './dto/generate-post.dto';
@@ -126,6 +126,18 @@ export class ContentGeneratorService {
     if (!existingContent) {
       throw new NotFoundException(
         `Content with ID '${contentId}' not found in this store`,
+      );
+    }
+
+    if (existingContent.status === ContentStatus.PUBLISHED) {
+      throw new BadRequestException(
+        'This post has already been published to Facebook and cannot be regenerated or overwritten.',
+      );
+    }
+
+    if (existingContent.status === ContentStatus.APPROVED) {
+      throw new BadRequestException(
+        'This post is already approved and locked. Revert to draft if you wish to regenerate.',
       );
     }
 
