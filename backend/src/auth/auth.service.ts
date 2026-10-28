@@ -45,11 +45,32 @@ export class AuthService {
         ? (rawPicture as any).data.url
         : undefined;
 
+    // Detect authentication provider and permanent Facebook ID
+    let authProvider: 'email' | 'facebook' = 'email';
+    let facebookId: string | undefined = undefined;
+
+    const fbIdentity = user.identities?.find((i) => i.provider === 'facebook');
+    const isFacebook =
+      user.app_metadata?.provider === 'facebook' ||
+      user.app_metadata?.providers?.includes('facebook') ||
+      !!fbIdentity ||
+      user.user_metadata?.iss?.includes('facebook.com');
+
+    if (isFacebook) {
+      authProvider = 'facebook';
+      facebookId =
+        (fbIdentity?.id as string) ||
+        (user.user_metadata?.provider_id as string) ||
+        (user.user_metadata?.sub as string);
+    }
+
     const userEntity = await this.usersService.findOrCreateUser({
       id: user.id,
       email: user.email ?? `${user.id}@postmind.local`,
       name,
       avatarUrl,
+      authProvider,
+      facebookId,
     });
 
     const storeName =

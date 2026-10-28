@@ -16,12 +16,14 @@ datasource db {
 // 1. User & Identity (Synced with Supabase Auth)
 // --------------------------------------------------------
 model User {
-  id        String   @id // Supabase auth.users UUID (sub)
-  email     String   @unique
-  name      String?
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id // Supabase auth.users UUID (sub)
+  email        String?  @unique
+  facebookId   String?  @unique
+  authProvider String   @default("email") // "email" | "facebook"
+  name         String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   stores Store[]
 
