@@ -16,5 +16,13 @@ export class RegeneratePostDto {
 
   @IsString()
   @IsOptional()
+  sourceHeadline?: string;
+
+  @IsString()
+  @IsOptional()
+  sourceCaption?: string;
+
+  @IsString()
+  @IsOptional()
   language?: string;
 }

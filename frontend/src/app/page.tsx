@@ -53,6 +53,7 @@ export default function DashboardPage() {
     isRegenerating,
     isSaving,
     currentTone,
+    currentLanguage,
     suggestedTime,
     generatePost,
     regeneratePost,
@@ -356,11 +357,17 @@ export default function DashboardPage() {
       ) {
         await regeneratePost(activeStore.id, currentPost.id, {
           tone: currentTone,
+          language: currentLanguage,
+          sourceHeadline: currentPost.headline,
+          sourceCaption: currentPost.caption,
         });
       } else if (activeItem?.id) {
         await generatePost(activeStore.id, {
           productId: activeItem.id,
           tone: currentTone,
+          language: currentLanguage,
+          sourceHeadline: currentPost?.headline,
+          sourceCaption: currentPost?.caption,
         });
       }
     } catch (err) {

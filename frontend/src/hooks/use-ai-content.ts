@@ -32,8 +32,11 @@ export interface GeneratePostInput {
   storeId: string;
   productId?: string;
   tone?: 'NATURAL' | 'WITTY' | 'PROMO' | 'STORYTELLING';
+  language?: 'en' | 'bn';
   customPrompt?: string;
   offerDetails?: string;
+  sourceHeadline?: string;
+  sourceCaption?: string;
 }
 
 export function useAiContent() {

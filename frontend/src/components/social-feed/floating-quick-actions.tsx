@@ -17,14 +17,17 @@ export function FloatingQuickActions({
   onSelectTone,
 }: FloatingQuickActionsProps) {
   const {
+    currentPost,
     currentTone: storeTone,
     currentLanguage,
     isGenerating,
+    isRegenerating,
     customPrompt,
     setTone,
     setLanguage,
     setCustomPrompt,
     generatePost,
+    regeneratePost,
   } = useContentStore();
 
   const { activeStore } = useStores();
@@ -36,35 +39,69 @@ export function FloatingQuickActions({
   const activeTone = propTone || storeTone;
 
   const handleLanguageClick = async (lang: 'en' | 'bn') => {
-    if (isGenerating || currentLanguage === lang) return;
+    if (isGenerating || isRegenerating || currentLanguage === lang) return;
     setLanguage(lang);
     if (activeStore?.id) {
       try {
-        await generatePost(activeStore.id, {
-          productId: selectedProduct?.id,
-          tone: activeTone,
-          language: lang,
-          customPrompt: promptInput.trim() || customPrompt || undefined,
-        });
+        const hasPersistedPost =
+          currentPost?.id &&
+          !currentPost.id.startsWith('post-') &&
+          !currentPost.id.startsWith('demo-');
+
+        if (hasPersistedPost) {
+          await regeneratePost(activeStore.id, currentPost.id, {
+            tone: activeTone,
+            language: lang,
+            customPrompt: promptInput.trim() || customPrompt || undefined,
+            sourceHeadline: currentPost.headline,
+            sourceCaption: currentPost.caption,
+          });
+        } else {
+          await generatePost(activeStore.id, {
+            productId: selectedProduct?.id,
+            tone: activeTone,
+            language: lang,
+            customPrompt: promptInput.trim() || customPrompt || undefined,
+            sourceHeadline: currentPost?.headline,
+            sourceCaption: currentPost?.caption,
+          });
+        }
       } catch (err) {
-        console.warn('Language switch generation error:', err);
+        console.warn('Language switch transcreation error:', err);
       }
     }
   };
 
   const handleToneClick = async (tone: 'natural' | 'witty' | 'promo' | 'storytelling') => {
-    if (isGenerating) return;
+    if (isGenerating || isRegenerating) return;
     setTone(tone);
     if (onSelectTone) onSelectTone(tone);
 
     if (activeStore?.id) {
       try {
-        await generatePost(activeStore.id, {
-          productId: selectedProduct?.id,
-          tone,
-          language: currentLanguage,
-          customPrompt: promptInput.trim() || customPrompt || undefined,
-        });
+        const hasPersistedPost =
+          currentPost?.id &&
+          !currentPost.id.startsWith('post-') &&
+          !currentPost.id.startsWith('demo-');
+
+        if (hasPersistedPost) {
+          await regeneratePost(activeStore.id, currentPost.id, {
+            tone,
+            language: currentLanguage,
+            customPrompt: promptInput.trim() || customPrompt || undefined,
+            sourceHeadline: currentPost.headline,
+            sourceCaption: currentPost.caption,
+          });
+        } else {
+          await generatePost(activeStore.id, {
+            productId: selectedProduct?.id,
+            tone,
+            language: currentLanguage,
+            customPrompt: promptInput.trim() || customPrompt || undefined,
+            sourceHeadline: currentPost?.headline,
+            sourceCaption: currentPost?.caption,
+          });
+        }
       } catch (err) {
         console.warn('Tone switch generation error:', err);
       }
@@ -73,16 +110,34 @@ export function FloatingQuickActions({
 
   const handlePromptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeStore?.id || isGenerating) return;
+    if (!activeStore?.id || isGenerating || isRegenerating) return;
 
-    setCustomPrompt(promptInput.trim());
+    const trimmedPrompt = promptInput.trim();
+    setCustomPrompt(trimmedPrompt);
     try {
-      await generatePost(activeStore.id, {
-        productId: selectedProduct?.id,
-        tone: activeTone,
-        language: currentLanguage,
-        customPrompt: promptInput.trim() || undefined,
-      });
+      const hasPersistedPost =
+        currentPost?.id &&
+        !currentPost.id.startsWith('post-') &&
+        !currentPost.id.startsWith('demo-');
+
+      if (hasPersistedPost) {
+        await regeneratePost(activeStore.id, currentPost.id, {
+          tone: activeTone,
+          language: currentLanguage,
+          customPrompt: trimmedPrompt || undefined,
+          sourceHeadline: currentPost.headline,
+          sourceCaption: currentPost.caption,
+        });
+      } else {
+        await generatePost(activeStore.id, {
+          productId: selectedProduct?.id,
+          tone: activeTone,
+          language: currentLanguage,
+          customPrompt: trimmedPrompt || undefined,
+          sourceHeadline: currentPost?.headline,
+          sourceCaption: currentPost?.caption,
+        });
+      }
       setIsPromptExpanded(false);
     } catch (err) {
       console.warn('Prompt generation error:', err);
@@ -201,7 +256,7 @@ export function FloatingQuickActions({
                 <button
                   type="button"
                   onClick={() => handleLanguageClick('en')}
-                  disabled={isGenerating}
+                  disabled={isGenerating || isRegenerating}
                   className={cn(
                     'px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer disabled:opacity-50',
                     currentLanguage === 'en'
@@ -214,7 +269,7 @@ export function FloatingQuickActions({
                 <button
                   type="button"
                   onClick={() => handleLanguageClick('bn')}
-                  disabled={isGenerating}
+                  disabled={isGenerating || isRegenerating}
                   className={cn(
                     'px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer disabled:opacity-50',
                     currentLanguage === 'bn'

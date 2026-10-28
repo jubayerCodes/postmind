@@ -77,6 +77,8 @@ interface ContentState {
       language?: 'en' | 'bn';
       customPrompt?: string;
       offerDetails?: string;
+      sourceHeadline?: string;
+      sourceCaption?: string;
     },
   ) => Promise<ContentItem>;
   regeneratePost: (
@@ -87,6 +89,8 @@ interface ContentState {
       language?: 'en' | 'bn';
       customPrompt?: string;
       offerDetails?: string;
+      sourceHeadline?: string;
+      sourceCaption?: string;
     },
   ) => Promise<ContentItem>;
   setTone: (tone: 'natural' | 'witty' | 'promo' | 'storytelling') => void;
@@ -192,6 +196,8 @@ export const useContentStore = create<ContentState>((set, get) => ({
           language: selectedLanguage,
           customPrompt: options.customPrompt ?? get().customPrompt ?? undefined,
           offerDetails: options.offerDetails || undefined,
+          sourceHeadline: options.sourceHeadline || undefined,
+          sourceCaption: options.sourceCaption || undefined,
         }),
       });
 
@@ -240,6 +246,8 @@ export const useContentStore = create<ContentState>((set, get) => ({
           language: selectedLanguage,
           customPrompt: options.customPrompt ?? get().customPrompt ?? undefined,
           offerDetails: options.offerDetails || undefined,
+          sourceHeadline: options.sourceHeadline || undefined,
+          sourceCaption: options.sourceCaption || undefined,
         }),
       });
 
