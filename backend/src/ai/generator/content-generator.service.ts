@@ -9,9 +9,20 @@ import {
 } from './schemas/social-post-output.schema';
 import { Content, ContentStatus, ContentTone, PostType } from '@prisma/client';
 
+export interface PostGenerationProductContext {
+  id?: string;
+  name: string;
+  price?: number;
+  category?: string;
+  tagline?: string | null;
+  features?: string[];
+  discount?: string | null;
+}
+
 export interface PostGenerationContext {
   storeName: string;
   currency: string;
+  products?: PostGenerationProductContext[];
   productName?: string;
   productPrice?: number;
   productCategory?: string;
@@ -25,6 +36,40 @@ export interface PostGenerationContext {
   sourceHeadline?: string;
   sourceCaption?: string;
 }
+
+const contentInclude = {
+  product: {
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      price: true,
+      currency: true,
+      category: true,
+      tagline: true,
+      features: true,
+      discount: true,
+    },
+  },
+  attachedProducts: {
+    orderBy: { order: 'asc' as const },
+    include: {
+      product: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          price: true,
+          currency: true,
+          category: true,
+          tagline: true,
+          features: true,
+          discount: true,
+        },
+      },
+    },
+  },
+};
 
 @Injectable()
 export class ContentGeneratorService {
@@ -47,31 +92,40 @@ export class ContentGeneratorService {
       throw new NotFoundException(`Store with ID '${storeId}' not found`);
     }
 
-    let product = null;
-    if (dto.productId) {
-      product = await this.prisma.product.findFirst({
-        where: { id: dto.productId, storeId, isArchived: false },
-      });
-      if (!product) {
-        throw new NotFoundException(
-          `Product with ID '${dto.productId}' not found in this store`,
-        );
-      }
-    }
+    const rawIds = dto.productIds ?? (dto.productId ? [dto.productId] : []);
+    const productIds = Array.from(new Set(rawIds.filter(Boolean)));
 
+    const products = productIds.length > 0
+      ? await this.prisma.product.findMany({
+          where: { id: { in: productIds }, storeId, isArchived: false },
+        })
+      : [];
+
+    const primaryProduct = products[0] || null;
     const tone = dto.tone || ContentToneEnum.NATURAL;
     const language = dto.language || 'en';
+
+    const productContexts: PostGenerationProductContext[] = products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price ? Number(p.price) : undefined,
+      category: p.category,
+      tagline: p.tagline,
+      features: p.features || [],
+      discount: p.discount,
+    }));
 
     // Generate output (via LLM if key present, or via contextual generator)
     const rawOutput = await this.executeGeneration({
       storeName: store.name,
       currency: store.currency,
-      productName: product?.name,
-      productPrice: product?.price ? Number(product.price) : undefined,
-      productCategory: product?.category,
-      productTagline: product?.tagline || undefined,
-      productFeatures: product?.features || [],
-      productDiscount: product?.discount,
+      products: productContexts,
+      productName: primaryProduct?.name,
+      productPrice: primaryProduct?.price ? Number(primaryProduct.price) : undefined,
+      productCategory: primaryProduct?.category,
+      productTagline: primaryProduct?.tagline || undefined,
+      productFeatures: primaryProduct?.features || [],
+      productDiscount: primaryProduct?.discount,
       tone,
       language,
       customPrompt: dto.customPrompt,
@@ -83,20 +137,37 @@ export class ContentGeneratorService {
     // Enforce strict Zod schema validation
     const validatedOutput = SocialPostOutputSchema.parse(rawOutput);
 
-    // Persist generated post to Neon DB
-    const content = await this.prisma.content.create({
-      data: {
-        storeId,
-        productId: product?.id || null,
-        headline: validatedOutput.headline,
-        caption: validatedOutput.caption,
-        hashtags: validatedOutput.hashtags,
-        cta: validatedOutput.cta,
-        postType: validatedOutput.postType as PostType,
-        tone: validatedOutput.tone as ContentTone,
-        language,
-        status: ContentStatus.READY,
-      },
+    // Persist generated post and attached products to Neon DB
+    const content = await this.prisma.$transaction(async (tx) => {
+      const newPost = await tx.content.create({
+        data: {
+          storeId,
+          productId: primaryProduct?.id || null,
+          headline: validatedOutput.headline,
+          caption: validatedOutput.caption,
+          hashtags: validatedOutput.hashtags,
+          cta: validatedOutput.cta,
+          postType: validatedOutput.postType as PostType,
+          tone: validatedOutput.tone as ContentTone,
+          language,
+          status: ContentStatus.READY,
+        },
+      });
+
+      if (products.length > 0) {
+        await tx.contentProduct.createMany({
+          data: products.map((p, idx) => ({
+            contentId: newPost.id,
+            productId: p.id,
+            order: idx,
+          })),
+        });
+      }
+
+      return tx.content.findUniqueOrThrow({
+        where: { id: newPost.id },
+        include: contentInclude,
+      });
     });
 
     return { content, aiOutput: validatedOutput };
@@ -120,7 +191,7 @@ export class ContentGeneratorService {
 
     const existingContent = await this.prisma.content.findFirst({
       where: { id: contentId, storeId },
-      include: { product: true },
+      include: contentInclude,
     });
 
     if (!existingContent) {
@@ -141,23 +212,39 @@ export class ContentGeneratorService {
       );
     }
 
-    const product = existingContent.product;
+    const attached = existingContent.attachedProducts.map((ap) => ap.product);
+    const products = attached.length > 0
+      ? attached
+      : (existingContent.product ? [existingContent.product] : []);
+
+    const primaryProduct = products[0] || null;
     const tone =
       dto?.tone ||
       (existingContent.tone.toLowerCase() as ContentToneEnum) ||
       ContentToneEnum.NATURAL;
     const language = dto?.language || existingContent.language || 'en';
 
+    const productContexts: PostGenerationProductContext[] = products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price ? Number(p.price) : undefined,
+      category: p.category,
+      tagline: p.tagline,
+      features: p.features || [],
+      discount: p.discount,
+    }));
+
     // Execute generation with preserved product context & requested tone
     const rawOutput = await this.executeGeneration({
       storeName: store.name,
       currency: store.currency,
-      productName: product?.name,
-      productPrice: product?.price ? Number(product.price) : undefined,
-      productCategory: product?.category,
-      productTagline: product?.tagline || undefined,
-      productFeatures: product?.features || [],
-      productDiscount: product?.discount,
+      products: productContexts,
+      productName: primaryProduct?.name,
+      productPrice: primaryProduct?.price ? Number(primaryProduct.price) : undefined,
+      productCategory: primaryProduct?.category,
+      productTagline: primaryProduct?.tagline || undefined,
+      productFeatures: primaryProduct?.features || [],
+      productDiscount: primaryProduct?.discount,
       tone,
       language,
       customPrompt: dto?.customPrompt,
@@ -180,14 +267,12 @@ export class ContentGeneratorService {
         caption: validatedOutput.caption,
         hashtags: validatedOutput.hashtags,
         cta: validatedOutput.cta,
-        postType: preservedPostType, // explicitly preserved original format
+        postType: preservedPostType,
         tone: validatedOutput.tone as ContentTone,
         language,
         status: ContentStatus.READY,
       },
-      include: {
-        product: true,
-      },
+      include: contentInclude,
     });
 
     return {
@@ -202,7 +287,7 @@ export class ContentGeneratorService {
   private async executeGeneration(
     context: PostGenerationContext,
   ): Promise<SocialPostOutput> {
-    // 1. Prioritize Google Gemini API (verified high-quality & native Bengali transcreation)
+    // 1. Prioritize Google Gemini API
     const geminiKey =
       this.configService.get<string>('GEMINI_API_KEY') ||
       this.configService.get<string>('GOOGLE_API_KEY');
@@ -217,12 +302,8 @@ export class ContentGeneratorService {
       }
     }
 
-    // 2. Secondary fallback: AgentRouter / OpenAI if configured
-    const agentRouterKey =
-      this.configService.get<string>('AGENTROUTER_API_KEY') ||
-      this.configService.get<string>('AI_API_KEY') ||
-      this.configService.get<string>('OPENAI_API_KEY');
-
+    // 2. Fallback to AgentRouter API
+    const agentRouterKey = this.configService.get<string>('AI_API_KEY');
     if (agentRouterKey) {
       try {
         return await this.callAgentRouter(agentRouterKey, context);
@@ -355,42 +436,35 @@ export class ContentGeneratorService {
   private buildSystemPrompt(context: PostGenerationContext): string {
     const isBangla = context.language === 'bn';
     const cleanStoreTag = context.storeName.replace(/\s+/g, '');
-    const category = context.productCategory || 'General';
+    const hasMultiple = (context.products && context.products.length > 1);
+    const hasSingle = Boolean(context.productName);
 
     if (isBangla) {
-      return `You are PostMind's Lead Social Media Copywriter and E-commerce Brand Strategist for the Bangladeshi online merchant "${context.storeName}".
+      return `You are PostMind's Lead Social Media Copywriter and E-commerce Brand Strategist for the Bangladeshi merchant "${context.storeName}".
 Generate an engaging, high-converting social media post tailored for Facebook and Instagram.
 
 CRITICAL TRANSCREATION & COPYWRITING INSTRUCTION (বাংলা ভাবানুবাদ ও দেশীয় আবেগময় মার্কেটিং কপিরাইটিং):
-1. ABSOLUTELY NEVER do a direct, literal, or word-for-word translation from English! Mechanical translations sound robotic, awkward, and completely disconnect from Bangladeshi social media users.
-2. EMOTIONAL & CULTURAL RESONANCE (দেশীয় আবেগময় সংযোগ):
-   Write natively from the heart in natural, vibrant Bangladeshi Bengali (বাংলা) as used by top-performing Facebook merchant pages and popular F-commerce brands in Bangladesh.
-3. PRODUCT CONTEXT & CATEGORY SPECIFICITY:
-   - Product: "${context.productName || 'Featured Product'}"
-   - Category: "${category}"
-   - NEVER use clothing/fashion metaphors (like "ওয়ারড্রোব", "পোশাক", "ড্রেসিং") for gaming, tech, or electronic gear!
-   - Gaming Gear: Speak to gaming thrill, FIFA/FPS adrenaline, precision, vibration feedback, beating friends, long gaming sessions without hand fatigue.
-   - Fashion/Apparel: Speak to elegance, festive vibes, luxury fabric feel, personal confidence, styling.
-   - Footwear/Sneakers: Speak to all-day comfort, agility, style on the move, endurance.
-   - Accessories/Watches: Speak to sophistication, timeless luxury, personality, statement piece.
-   - Tech/Gadgets: Speak to productivity, smart living, seamless connectivity, durability.
+1. ABSOLUTELY NEVER do a direct, literal, or word-for-word translation from English!
+2. Write natively in natural, vibrant Bangladeshi Bengali (বাংলা) as used by top-performing Facebook merchant pages and popular F-commerce brands.
+3. CONTEXT:
+${hasMultiple ? `   - Highlighting a curated collection/bundle of ${context.products?.length} products.` : hasSingle ? `   - Single Product Spotlight: "${context.productName}"` : `   - Brand Campaign / General Engagement for store "${context.storeName}"`}
 4. TONE ADAPTATION (${context.tone}):
    - WITTY: Clever, fun, punchy humor, relatable youth culture and banter.
    - PROMO: Authentic urgency, exciting deal/discount, value for money, Cash on Delivery.
-   - STORYTELLING: Passion, craft, deep appreciation, lifestyle journey, emotional connect.
+   - STORYTELLING: Passion, craft, lifestyle journey, emotional connect.
    - NATURAL: Warm, conversational, friendly recommendation from a trusted friend.
 5. BANGLADESH F-COMMERCE BEST PRACTICES:
-   - Headline: Catchy Bengali headline with relevant emojis in Bengali script.
-   - Caption: Engaging, persuasive copy highlighting product strengths and buyer excitement. Mention Cash on Delivery across Bangladesh (সারাদেশে ক্যাশ অন ডেলিভারি, পার্সেল চেক করে পেমেন্ট করার সুবিধা) naturally.
-   - CTA: Actionable Bengali call-to-action (e.g. "অর্ডার করতে এখনই ইনবক্স করুন 🛒💬", "আজই নিজের জন্য সংগ্রহ করুন!").
-   - Hashtags: 4-6 authentic, popular hashtags in Bengali & English (e.g. #${cleanStoreTag}, #অনলাইনশপিং, #বাংলাদেশ, #${category.replace(/\s+/g, '')}BD).
+   - Headline: Catchy Bengali headline with relevant emojis.
+   - Caption: Engaging, persuasive copy highlighting strengths. Mention Cash on Delivery across Bangladesh (সারাদেশে ক্যাশ অন ডেলিভারি, পার্সেল চেক করে পেমেন্ট করার সুবিধা) naturally.
+   - CTA: Actionable Bengali call-to-action (e.g. "অর্ডার করতে এখনই ইনবক্স করুন 🛒💬").
+   - Hashtags: 4-6 authentic, popular hashtags in Bengali & English (e.g. #${cleanStoreTag}, #অনলাইনশপিং, #বাংলাদেশ).
 ${
   context.sourceCaption
     ? `
 PREVIOUS DRAFT CONTENT TO TRANSCREATE (ভাবানুবাদ করুন):
 Previous Headline: "${context.sourceHeadline || ''}"
 Previous Caption: "${context.sourceCaption || ''}"
--> DO NOT translate word-for-word! TRANSCREATE the essence, excitement, and purpose into passionate, natural Bengali tailored for Bangladeshi buyers.`
+-> DO NOT translate word-for-word! TRANSCREATE the essence, excitement, and purpose into natural Bengali.`
     : ''
 }
 
@@ -400,7 +474,7 @@ Respond ONLY with a valid JSON object strictly matching this schema:
   "caption": string,
   "cta": string,
   "hashtags": string[],
-  "postType": "PRODUCT_SHOWCASE" | "OFFER" | "ENGAGEMENT" | "STORY",
+  "postType": "${hasMultiple ? 'PRODUCT_SHOWCASE' : hasSingle ? 'PRODUCT_SHOWCASE' : 'ENGAGEMENT'}",
   "tone": "${context.tone}",
   "suggestedPublishTime": "8:30 PM"
 }`;
@@ -408,7 +482,7 @@ Respond ONLY with a valid JSON object strictly matching this schema:
 
     return `You are PostMind's Lead Social Media Copywriter for online merchant "${context.storeName}".
 Generate an engaging, high-converting social media post tailored for Facebook and Instagram in fluent, modern English.
-Strictly tailor the tone and metaphors to the product category: "${category}".
+${hasMultiple ? `Highlighting a curated collection of ${context.products?.length} products.` : hasSingle ? `Featuring product: "${context.productName}".` : `Brand campaign / store update for "${context.storeName}".`}
 ${
   context.sourceCaption
     ? `
@@ -425,14 +499,25 @@ Respond ONLY with a valid JSON object strictly matching this schema:
   "caption": string,
   "cta": string,
   "hashtags": string[],
-  "postType": "PRODUCT_SHOWCASE" | "OFFER" | "ENGAGEMENT" | "STORY",
+  "postType": "${hasMultiple ? 'PRODUCT_SHOWCASE' : hasSingle ? 'PRODUCT_SHOWCASE' : 'ENGAGEMENT'}",
   "tone": "${context.tone}",
   "suggestedPublishTime": "8:00 PM"
 }`;
   }
 
   private buildUserPrompt(context: PostGenerationContext): string {
-    return `Product: ${context.productName || 'Featured Collection'}
+    if (context.products && context.products.length > 1) {
+      const itemsDesc = context.products
+        .map(
+          (p, i) =>
+            `${i + 1}. ${p.name} (${p.category || 'General'}) - ${p.price ? `${context.currency} ${p.price}` : 'Price on request'} ${p.discount ? `[${p.discount}]` : ''}`,
+        )
+        .join('\n');
+      return `Products Collection (${context.products.length} items):\n${itemsDesc}\n\nDesired Tone: ${context.tone}\n${context.offerDetails ? `Offer Details: ${context.offerDetails}\n` : ''}${context.customPrompt ? `Special Note/Theme: ${context.customPrompt}\n` : ''}`;
+    }
+
+    if (context.productName) {
+      return `Product: ${context.productName}
 Price: ${context.productPrice ? `${context.currency} ${context.productPrice}` : 'N/A'}
 Tagline: ${context.productTagline || 'N/A'}
 Category: ${context.productCategory || 'General'}
@@ -440,6 +525,12 @@ Features: ${context.productFeatures?.join(', ') || 'N/A'}
 Discount: ${context.productDiscount || context.offerDetails || 'N/A'}
 Desired Tone: ${context.tone}
 ${context.customPrompt ? `Special Merchant Note: ${context.customPrompt}` : ''}`;
+    }
+
+    return `Store Brand Announcement / Social Post for: "${context.storeName}"
+Desired Tone: ${context.tone}
+${context.offerDetails ? `Offer / Campaign Details: ${context.offerDetails}\n` : ''}
+${context.customPrompt ? `Merchant Note / Instructions: ${context.customPrompt}` : 'Create an engaging social media post to connect with customers, build trust, and drive engagement.'}`;
   }
 
   private detectCategory(
@@ -468,14 +559,104 @@ ${context.customPrompt ? `Special Merchant Note: ${context.customPrompt}` : ''}`
   private generateContextualPost(
     context: PostGenerationContext,
   ): SocialPostOutput {
-    const product = context.productName || 'Exclusive Drop';
+    const isBangla = context.language === 'bn';
+    const cleanStoreTag = context.storeName.replace(/\s+/g, '');
+
+    // Case 1: Multiple products attached (Collection / Bundle)
+    if (context.products && context.products.length > 1) {
+      const names = context.products.map((p) => p.name).join(', ');
+      const minPrice = Math.min(...context.products.map((p) => p.price || 0).filter(Boolean));
+      const priceStr = minPrice > 0 ? `${context.currency === 'BDT' ? '৳' : '$'}${minPrice.toLocaleString()}` : '';
+
+      if (isBangla) {
+        return {
+          headline: `সেরা কালেকশনের দারুণ সমাহার ${context.storeName}-এ! ✨🛍️`,
+          caption: `আপনার পছন্দের সেরা আইটেমগুলো নিয়ে এলাম এক সাথে! কালেকশনে রয়েছে ${names}।${priceStr ? ` শুরু মাত্র ${priceStr} থেকে!` : ''} প্রতিটি প্রোডাক্টে নিশ্চিত করছি প্রিমিয়াম কোয়ালিটি ও সেরা ফিনিশিং। সারা দেশে দ্রুত ক্যাশ অন ডেলিভারি সুবিধা!`,
+          cta: `পুরো কালেকশন দেখতে এখনই ইনবক্স করুন 🛒💬`,
+          hashtags: [`#${cleanStoreTag}`, '#কালেকশন', '#অনলাইনশপিং', '#সেরাডিল', '#বাংলাদেশ'],
+          postType: 'PRODUCT_SHOWCASE',
+          tone: context.tone as ContentTone,
+          suggestedPublishTime: '8:30 PM',
+        };
+      }
+
+      return {
+        headline: `Curated Picks: Discover What's New at ${context.storeName} ✨`,
+        caption: `Elevate your lifestyle with our exclusive showcase featuring ${names}! Handpicked for quality and comfort.${priceStr ? ` Starting from ${priceStr}.` : ''} Fast nationwide delivery right to your door.`,
+        cta: `Explore the collection — Send us a message today! 🛍️`,
+        hashtags: [`#${cleanStoreTag}`, '#NewArrivals', '#ShopOnline', '#CuratedCollection'],
+        postType: 'PRODUCT_SHOWCASE',
+        tone: context.tone as ContentTone,
+        suggestedPublishTime: '8:00 PM',
+      };
+    }
+
+    // Case 2: Zero products attached (Brand / Announcement / Store post)
+    if (!context.productName) {
+      if (isBangla) {
+        switch (context.tone) {
+          case ContentToneEnum.PROMO:
+            return {
+              headline: `🚨 বিশেষ অফার চলছে ${context.storeName}-এ! 🎁🔥`,
+              caption: `আমাদের সম্পূর্ণ স্টোরে উপভোগ করুন আকর্ষণীয় সব ডিল ও স্পেশাল ছাড়! বিশ্বস্ত সার্ভিস, প্রিমিয়াম কোয়ালিটি আর সারাদেশে ক্যাশ অন ডেলিভারির সুবিধা। স্টক শেষ হওয়ার আগেই লুফে নিন!`,
+              cta: `অফার সম্পর্কে জানতে এখনই ইনবক্স করুন 💬`,
+              hashtags: [`#${cleanStoreTag}`, '#ধামাকাঅফার', '#অনলাইনশপিং', '#ডিসকাউন্ট', '#বাংলাদেশ'],
+              postType: 'OFFER',
+              tone: 'PROMO',
+              suggestedPublishTime: '7:30 PM',
+            };
+          case ContentToneEnum.WITTY:
+            return {
+              headline: `শপিংয়ের আনন্দ যখন দ্বিগুণ! 😉🛍️`,
+              caption: `দিনের ক্লান্তি দূর করতে ${context.storeName}-এর দারুণ কালেকশন ঘুরে দেখাই যথেষ্ট! সেরা সব ট্রেন্ডি আইটেম বেছে নিন নিজের স্টাইলে।`,
+              cta: `দেরি না করে আজই ইনবক্স করুন 💬`,
+              hashtags: [`#${cleanStoreTag}`, '#শপিংমুড', '#ট্রেন্ডি', '#অনলাইনশপিং'],
+              postType: 'ENGAGEMENT',
+              tone: 'WITTY',
+              suggestedPublishTime: '8:30 PM',
+            };
+          case ContentToneEnum.STORYTELLING:
+            return {
+              headline: `আপনার আস্থাই আমাদের সবচেয়ে বড় শক্তি 🌟`,
+              caption: `প্রতিটি পদক্ষেপে আপনাদের কাছে সর্বোচ্চ মানের পণ্য এবং নির্ভরযোগ্য সেবা পৌঁছে দেওয়াই ${context.storeName}-এর একমাত্র অঙ্গীকার। আমাদের সাথে থাকার জন্য আন্তরিক ধন্যবাদ!`,
+              cta: `আমাদের সাথে যুক্ত থাকুন ✨`,
+              hashtags: [`#${cleanStoreTag}`, '#আস্থা', '#বিশ্বস্ততা', '#আমাদেরগল্প'],
+              postType: 'STORY',
+              tone: 'STORYTELLING',
+              suggestedPublishTime: '9:00 PM',
+            };
+          case ContentToneEnum.NATURAL:
+          default:
+            return {
+              headline: `${context.storeName}-এ আপনাকে স্বাগতম! ✨`,
+              caption: `সেরা মানের পণ্য আর দ্রুত ডেলিভারি সেবায় আমরা আছি সবসময় আপনার পাশে। সারাদেশে ক্যাশ অন ডেলিভারি সুবিধাসহ নিশ্চিন্তে কেনাকাটা করুন।`,
+              cta: `যেকোনো তথ্যের জন্য এখনই ইনবক্স করুন 🛒`,
+              hashtags: [`#${cleanStoreTag}`, '#অনলাইনশপিং', '#সেরাসেবা', '#বাংলাদেশ'],
+              postType: 'ENGAGEMENT',
+              tone: 'NATURAL',
+              suggestedPublishTime: '8:00 PM',
+            };
+        }
+      }
+
+      return {
+        headline: `Welcome to ${context.storeName}! ✨`,
+        caption: `Quality, reliability, and style delivered right to your doorstep. We take pride in bringing you the finest experience every single day. Fast delivery nationwide!`,
+        cta: `Send us a message to learn more 💬`,
+        hashtags: [`#${cleanStoreTag}`, '#StoreUpdate', '#CustomerFirst', '#ShopLocal'],
+        postType: 'ENGAGEMENT',
+        tone: context.tone as ContentTone,
+        suggestedPublishTime: '8:00 PM',
+      };
+    }
+
+    // Case 3: Single product spotlight
+    const product = context.productName;
     const priceStr = context.productPrice
       ? `${context.currency === 'BDT' ? '৳' : '$'}${context.productPrice.toLocaleString()}`
       : '';
     const tagline = context.productTagline || '';
     const discountStr = context.productDiscount || context.offerDetails || '15% OFF';
-    const cleanStoreTag = context.storeName.replace(/\s+/g, '');
-    const isBangla = context.language === 'bn';
     const category = this.detectCategory(context.productCategory, context.productName);
 
     if (isBangla) {
@@ -525,80 +706,34 @@ ${context.customPrompt ? `Special Merchant Note: ${context.customPrompt}` : ''}`
         }
       }
 
-      if (category === 'fashion') {
-        switch (context.tone) {
-          case ContentToneEnum.WITTY:
-            return {
-              headline: `${product} — স্টাইল যখন ১০০ তে ১০০! ✨`,
-              caption: `সবার ভিড়ে নিজেকে আলাদা দেখাতে আর কত ভাববেন? 🔥 বোরিং ডিজাইন ছেড়ে বেছে নিন ট্রেন্ডি ${product}। ${tagline ? `${tagline}। ` : ''}লুক হবে একদম অন-পয়েন্ট আর কনফিডেন্স থাকবে তুঙ্গে! বন্ধুরা জিজ্ঞেস করার আগেই নিজের জন্য সংগ্রহ করুন।`,
-              cta: `নিজের লুক আপগ্রেড করুন — এখনই অর্ডার করুন 🛍️`,
-              hashtags: [`#${cleanStoreTag}`, '#ফ্যাশনবিডি', '#ট্রেন্ডিংলুক', '#অনলাইনশপিং', '#পোস্টমাইন্ড'],
-              postType: 'ENGAGEMENT',
-              tone: 'WITTY',
-              suggestedPublishTime: '8:30 PM',
-            };
-          case ContentToneEnum.PROMO:
-            return {
-              headline: `🚨 ফ্যাশন ড্রপ অফার: ${product}-এ পাচ্ছেন ${discountStr}`,
-              caption: `স্পেশাল ফ্যাশন ডিল! 🏷️ আকর্ষণীয় ${discountStr} ছাড়ে আজই পেয়ে যান আপনার পছন্দের ${product}! ${priceStr ? `মূল্য মাত্র ${priceStr}।` : ''} ${tagline ? `${tagline}। ` : ''}প্রিমিয়াম ফেব্রিক ও চমৎকার ফিনিশিং। সারাদেশে ক্যাশ অন ডেলিভারি সুবিধা!`,
-              cta: `অফারটি লুফে নিতে — এখনই ইনবক্স করুন`,
-              hashtags: [`#${cleanStoreTag}`, '#ধামাকাঅফার', '#ফ্যাশনডিল', '#ডিসকাউন্ট', '#পোস্টমাইন্ড'],
-              postType: 'OFFER',
-              tone: 'PROMO',
-              suggestedPublishTime: '7:00 PM',
-            };
-          case ContentToneEnum.STORYTELLING:
-            return {
-              headline: `${product}-এর পেছনের গল্প ও আভিজাত্য`,
-              caption: `প্রতিটি অনন্য পোশাকের পেছনে থাকে নিপুণ কারিগরি আর ভালোবাসার ছোঁয়া। ${product} তৈরির সময় আমরা প্রতিটি সুতো ও ফিনিশিংয়ে দিয়েছি সর্বোচ্চ যত্ন। ${tagline ? `${tagline}। ` : ''}এটি কেবল একটি পোশাক নয়, বরং আপনার ব্যক্তিত্ব ও রুচির চমৎকার প্রতিফলন। ✨`,
-              cta: `বিস্তারিত জানতে ইনবক্স করুন`,
-              hashtags: [`#${cleanStoreTag}`, '#ক্রাফটসম্যানশিপ', '#রুচিশীলপোশাক', '#আভিজাত্য', '#বাংলাদেশ'],
-              postType: 'STORY',
-              tone: 'STORYTELLING',
-              suggestedPublishTime: '9:00 PM',
-            };
-          case ContentToneEnum.NATURAL:
-          default:
-            return {
-              headline: `নতুন কালেকশন: ${product}`,
-              caption: `সবেমাত্র পৌঁছাল আমাদের নতুন ফ্যাশন ড্রপ! ✨ আপনার দৈনন্দিন ও উৎসবের সাজকে আরও আকর্ষণীয় করতে নিয়ে এসেছি ${product}। ${tagline ? `${tagline}। ` : ''}${priceStr ? `মূল্য মাত্র ${priceStr}। ` : ''}সারাদেশে দ্রুত ক্যাশ অন ডেলিভারি সুবিধাসহ সীমিত স্টক উপলব্ধ।`,
-              cta: `এখনই শপ করুন — ক্যাশ অন ডেলিভারি সুবিধা 🛍️`,
-              hashtags: [`#${cleanStoreTag}`, '#নতুনকালেকশন', '#অনলাইনশপিং', '#বাংলাদেশ', '#পোস্টমাইন্ড'],
-              postType: 'PRODUCT_SHOWCASE',
-              tone: 'NATURAL',
-              suggestedPublishTime: '8:00 PM',
-            };
-        }
-      }
-
-      // Default / Tech / Footwear / Accessories general fallback in natural Bengali
+      // Default Bangla product showcase
       switch (context.tone) {
+        case ContentToneEnum.PROMO:
+          return {
+            headline: `🚨 বিশেষ ছাড়: ${product} এখন আকর্ষণীয় মূল্যে! ✨`,
+            caption: `সীমিত সময়ের স্পেশাল অফার! ${product} সংগ্রহ করুন ${discountStr} ছাড়ে। ${priceStr ? `মূল্য মাত্র ${priceStr}। ` : ''}${tagline ? `${tagline}। ` : ''}সারা দেশে দ্রুত ক্যাশ অন ডেলিভারি সুবিধা!`,
+            cta: `অর্ডার করতে এখনই ইনবক্স করুন 🛒`,
+            hashtags: [`#${cleanStoreTag}`, '#স্পেশালঅফার', '#ডিসকাউন্ট', '#অনলাইনশপিং'],
+            postType: 'OFFER',
+            tone: 'PROMO',
+            suggestedPublishTime: '7:30 PM',
+          };
         case ContentToneEnum.WITTY:
           return {
-            headline: `${product} — সবসময় এগিয়ে থাকুন ট্রেন্ডে 🔥`,
-            caption: `সাধারণ কিছু ব্যবহার করে আর কতদিন? বেছে নিন সুপার ট্রেন্ডি ও প্রিমিয়াম ${product}! ${tagline ? `${tagline}। ` : ''}আপনার প্রয়োজন আর স্টাইল দুটোই মিটবে এক নিমেষে। বন্ধুরা জেনে যাওয়ার আগেই আজই নিজের করে নিন!`,
-            cta: `দেরি না করে — এখনই অর্ডার করুন 🛒`,
-            hashtags: [`#${cleanStoreTag}`, '#ট্রেন্ডিং', '#অনলাইনশপিং', '#সেরাডিল', '#বাংলাদেশ'],
+            headline: `স্টাইলে এবার নতুন চমক: ${product} 😎🔥`,
+            caption: `চমৎকার লুক আর ট্রেন্ডি ভাইব—${product} আপনার কালেকশনকে করে তুলবে অনন্য! ${tagline ? `${tagline}। ` : ''}নিজের জন্য বেছে নিন সেরাটি।`,
+            cta: `ইনবক্স করুন এখনই 💬`,
+            hashtags: [`#${cleanStoreTag}`, '#ট্রেন্ডি', '#স্টাইল', '#অনলাইনশপিং'],
             postType: 'ENGAGEMENT',
             tone: 'WITTY',
             suggestedPublishTime: '8:30 PM',
           };
-        case ContentToneEnum.PROMO:
-          return {
-            headline: `🚨 মেগা অফার: ${product}-এ পাচ্ছেন ${discountStr}`,
-            caption: `স্পেশাল ধামাকা ডিসকাউন্ট! 🏷️ আপনার পছন্দের ${product} এখন পাচ্ছেন লোভনীয় ${discountStr} ছাড়ে! ${priceStr ? `মূল্য মাত্র ${priceStr}।` : ''} ${tagline ? `${tagline}। ` : ''}সেরা কোয়ালিটি ও দীর্ঘস্থায়িত্ব। সারা দেশে ক্যাশ অন ডেলিভারিতে চেক করে নেওয়ার সুবিধা!`,
-            cta: `অফারটি উপভোগ করতে — এখনই ইনবক্স করুন 💬`,
-            hashtags: [`#${cleanStoreTag}`, '#ধামাকাঅফার', '#ডিসকাউন্ট', '#সেরাডিল', '#সীমিতস্টক'],
-            postType: 'OFFER',
-            tone: 'PROMO',
-            suggestedPublishTime: '7:00 PM',
-          };
         case ContentToneEnum.STORYTELLING:
           return {
-            headline: `${product}-এর পেছনের নিখুঁত যত্ন ও গল্প ✨`,
-            caption: `প্রতিটি অনন্য পণ্যের পেছনে থাকে গভীর নিষ্ঠা আর নিখুঁত কারিগরি। ${product} তৈরি করার প্রতিটি ধাপে আমরা নিশ্চিত করেছি সর্বোচ্চ মান। ${tagline ? `${tagline}। ` : ''}এটি আপনার প্রতিদিনের অভিজ্ঞতায় নিয়ে আসবে চমৎকার পরিবর্তন ও স্বাচ্ছন্দ্য।`,
-            cta: `বিস্তারিত জেনে নিন — এখনই মেসেজ দিন`,
-            hashtags: [`#${cleanStoreTag}`, '#কোয়ালিটিফার্স্ট', '#আস্থারপ্রতীক', '#বাংলাদেশ', '#পোস্টমাইন্ড'],
+            headline: `সৌন্দর্য ও আস্থার মেলবন্ধন: ${product} ✨`,
+            caption: `প্রতিটি সূক্ষ্ম ডিটেইলে নিখুঁত কারুকাজ। ${product} শুধু কোনো সাধারণ আইটেম নয়, এটি আপনার রুচি ও আভিজাত্যের প্রতিফলন।`,
+            cta: `সংগ্রহ করতে যোগাযোগ করুন`,
+            hashtags: [`#${cleanStoreTag}`, '#আভিজাত্য', '#প্রিমিয়াম', '#বাংলাদেশ'],
             postType: 'STORY',
             tone: 'STORYTELLING',
             suggestedPublishTime: '9:00 PM',
@@ -606,10 +741,10 @@ ${context.customPrompt ? `Special Merchant Note: ${context.customPrompt}` : ''}`
         case ContentToneEnum.NATURAL:
         default:
           return {
-            headline: `নতুন ড্রপ: ${product}`,
-            caption: `সবেমাত্র হাজির হলো আমাদের ফ্রেশ কালেকশন! ✨ আপনার প্রতিদিনের অভিজ্ঞতা আরও সহজ ও আকর্ষণীয় করতে নিয়ে এসেছি ${product}। ${tagline ? `${tagline}। ` : ''}${priceStr ? `মূল্য মাত্র ${priceStr}। ` : ''}সারাদেশে দ্রুত ক্যাশ অন ডেলিভারি সুবিধাসহ সীমিত স্টক উপলব্ধ।`,
-            cta: `এখনই অর্ডার করুন — ক্যাশ অন ডেলিভারি 🛒`,
-            hashtags: [`#${cleanStoreTag}`, '#নতুনকালেকশন', '#অনলাইনশপিং', '#বাংলাদেশ', '#পোস্টমাইন্ড'],
+            headline: `আপনার পছন্দের তালিকায় যুক্ত করুন: ${product} ✨`,
+            caption: `দৈনন্দিন ব্যবহারে চমৎকার অভিজ্ঞতা নিশ্চিত করতে নিয়ে এলাম ${product}। ${tagline ? `${tagline}। ` : ''}${priceStr ? `মূল্য: ${priceStr}। ` : ''}সারা বাংলাদেশে ক্যাশ অন ডেলিভারি সুবিধা।`,
+            cta: `অর্ডার করতে এখনই ইনবক্স করুন 🛒`,
+            hashtags: [`#${cleanStoreTag}`, '#নতুনকালেকশন', '#অনলাইনশপিং', '#বাংলাদেশ'],
             postType: 'PRODUCT_SHOWCASE',
             tone: 'NATURAL',
             suggestedPublishTime: '8:00 PM',
@@ -617,96 +752,15 @@ ${context.customPrompt ? `Special Merchant Note: ${context.customPrompt}` : ''}`
       }
     }
 
-    // English contextual generator
-    if (category === 'gaming') {
-      switch (context.tone) {
-        case ContentToneEnum.WITTY:
-          return {
-            headline: `${product} — No More Blaming The Lag! 🎮🔥`,
-            caption: `Your gaming setup called: it's begging for an upgrade. 🔥 Stop letting a bad controller cost you the match when the ${product} exists. ${tagline ? `${tagline} ` : ''}Get that precision grip and vibration feedback before your squad leaves you behind!`,
-            cta: `Level Up Your Game — Order Today`,
-            hashtags: [`#${cleanStoreTag}`, '#GamingSetup', '#GamerLife', '#ProGamer', '#PostMindAI'],
-            postType: 'ENGAGEMENT',
-            tone: 'WITTY',
-            suggestedPublishTime: '8:30 PM',
-          };
-        case ContentToneEnum.PROMO:
-          return {
-            headline: `🚨 Gamer Deal: Save ${discountStr} on ${product}`,
-            caption: `FLASH GAMING SALE! 🏷️ Grab the ${product} today with an exclusive ${discountStr}! ${priceStr ? `Now only ${priceStr}. ` : ''}${tagline ? `${tagline} ` : ''}Crisp response, zero fatigue, pure performance. Stock is moving fast!`,
-            cta: `Claim ${discountStr} — Checkout Now`,
-            hashtags: [`#${cleanStoreTag}`, '#GamingSale', '#GamerDeals', '#SaveBig', '#PostMind'],
-            postType: 'OFFER',
-            tone: 'PROMO',
-            suggestedPublishTime: '7:00 PM',
-          };
-        case ContentToneEnum.STORYTELLING:
-          return {
-            headline: `Engineered for the Win: Inside ${product}`,
-            caption: `Late night matches, clutch moments, and the adrenaline of victory. When we engineered the ${product}, every ergonomic contour and vibration motor was tuned for pure immersion. ${tagline ? `${tagline} ` : ''}Gear up for the next chapter of your gaming journey. ✨`,
-            cta: `Explore the Tech`,
-            hashtags: [`#${cleanStoreTag}`, '#GamerPassion', '#EngineeringVictory', '#Immersion', '#GamingBD'],
-            postType: 'STORY',
-            tone: 'STORYTELLING',
-            suggestedPublishTime: '9:00 PM',
-          };
-        case ContentToneEnum.NATURAL:
-        default:
-          return {
-            headline: `Elevate Your Gameplay: ${product}`,
-            caption: `Just arrived in stock! 🎮 Take your gaming setup to the next level with the ${product}. ${tagline ? `${tagline} ` : ''}${priceStr ? `Available now for ${priceStr}. ` : ''}Fast nationwide shipping with Cash on Delivery available.`,
-            cta: `Shop Now — Fast Delivery`,
-            hashtags: [`#${cleanStoreTag}`, '#NewArrival', '#GamingGear', '#OnlineShopping', '#PostMind'],
-            postType: 'PRODUCT_SHOWCASE',
-            tone: 'NATURAL',
-            suggestedPublishTime: '8:00 PM',
-          };
-      }
-    }
-
-    // English Fashion & General fallback
-    switch (context.tone) {
-      case ContentToneEnum.WITTY:
-        return {
-          headline: `${product} — Drip Check Approved`,
-          caption: `Stop settling for basic when the ${product} exists. 🔥 ${tagline ? `${tagline} ` : ''}Upgrade your everyday rotation and stand out from the crowd before your friends realize they missed out!`,
-          cta: `Upgrade Your Style — Order Today`,
-          hashtags: [`#${cleanStoreTag}`, '#StyleUpgrade', '#DripCheck', '#FashionDaily', '#PostMindAI'],
-          postType: 'ENGAGEMENT',
-          tone: 'WITTY',
-          suggestedPublishTime: '8:30 PM',
-        };
-      case ContentToneEnum.PROMO:
-        return {
-          headline: `🚨 Limited Flash Deal: ${discountStr} on ${product}`,
-          caption: `FLASH SALE ALERT! 🏷️ Grab the ${product} today with an exclusive ${discountStr}! ${priceStr ? `Only ${priceStr}. ` : ''}${tagline ? `${tagline} ` : ''}Built to last, priced to steal. Stock is strictly limited!`,
-          cta: `Claim ${discountStr} — Checkout Now`,
-          hashtags: [`#${cleanStoreTag}`, '#FlashSale', '#DiscountAlert', '#LimitedDrop', '#BestDeals'],
-          postType: 'OFFER',
-          tone: 'PROMO',
-          suggestedPublishTime: '7:00 PM',
-        };
-      case ContentToneEnum.STORYTELLING:
-        return {
-          headline: `The Story Behind ${product}`,
-          caption: `Every piece has an origin. When we crafted the ${product}, we spent months obsessing over every detail, texture, and contour. ${tagline ? `${tagline} ` : ''}Experience true craftsmanship and elevated quality. ✨`,
-          cta: `Discover the Craftsmanship`,
-          hashtags: [`#${cleanStoreTag}`, '#BehindTheBrand', '#Craftsmanship', '#DesignedWithPassion', '#QualityFirst'],
-          postType: 'STORY',
-          tone: 'STORYTELLING',
-          suggestedPublishTime: '9:00 PM',
-        };
-      case ContentToneEnum.NATURAL:
-      default:
-        return {
-          headline: `Introducing ${product}`,
-          caption: `Just arrived! ✨ Elevate your everyday with the ${product}. ${tagline ? `${tagline} ` : ''}${priceStr ? `Available now for ${priceStr}. ` : ''}Available in limited quantities with fast nationwide delivery.`,
-          cta: `Shop Now — Cash on Delivery Available`,
-          hashtags: [`#${cleanStoreTag}`, '#NewArrival', '#OnlineShopping', '#FreshDrop', '#PostMind'],
-          postType: 'PRODUCT_SHOWCASE',
-          tone: 'NATURAL',
-          suggestedPublishTime: '8:00 PM',
-        };
-    }
+    // Default English product showcase
+    return {
+      headline: `Spotlight on ${product} ✨`,
+      caption: `Elevate your everyday experience with ${product}. ${tagline ? `${tagline}. ` : ''}${priceStr ? `Available now for only ${priceStr}. ` : ''}Nationwide delivery with cash on delivery available!`,
+      cta: `Shop now — Send us a direct message 🛒`,
+      hashtags: [`#${cleanStoreTag}`, '#FeaturedProduct', '#OnlineShopping', '#ShopNow'],
+      postType: 'PRODUCT_SHOWCASE',
+      tone: context.tone as ContentTone,
+      suggestedPublishTime: '8:00 PM',
+    };
   }
 }

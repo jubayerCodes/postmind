@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '@/lib/api-client';
+import { Product } from '@/stores/products-store';
 
 export type ContentStatus =
   | 'DRAFT'
@@ -12,6 +13,22 @@ export type ContentStatus =
 export type ContentTone = 'NATURAL' | 'WITTY' | 'PROMO' | 'STORYTELLING';
 
 export type PostType = 'PRODUCT_SHOWCASE' | 'OFFER' | 'ENGAGEMENT' | 'STORY';
+
+export interface AttachedProductRelation {
+  id?: string;
+  order: number;
+  product: {
+    id: string;
+    name: string;
+    image?: string | null;
+    price: string | number;
+    currency?: string;
+    category: string;
+    tagline?: string | null;
+    features?: string[];
+    discount?: string | null;
+  };
+}
 
 export interface ContentItem {
   id: string;
@@ -40,8 +57,13 @@ export interface ContentItem {
     name: string;
     image?: string | null;
     price: string | number;
+    currency?: string;
     category: string;
+    tagline?: string | null;
+    features?: string[];
+    discount?: string | null;
   } | null;
+  attachedProducts?: AttachedProductRelation[];
 }
 
 export interface SocialPostOutput {
@@ -69,10 +91,15 @@ interface ContentState {
   suggestedTime: string;
 
   // Actions
+  createNewPost: (storeId: string) => void;
+  attachProductToCurrentPost: (storeId: string, product: Product) => Promise<void>;
+  detachProductFromCurrentPost: (storeId: string, productId: string) => Promise<void>;
+  setAttachedProductsForCurrentPost: (storeId: string, products: Product[]) => Promise<void>;
   generatePost: (
     storeId: string,
     options: {
       productId?: string;
+      productIds?: string[];
       tone?: 'natural' | 'witty' | 'promo' | 'storytelling';
       language?: 'en' | 'bn';
       customPrompt?: string;
@@ -110,6 +137,8 @@ interface ContentState {
   savePost: (storeId: string) => Promise<ContentItem | null>;
   approvePost: (storeId: string) => Promise<ContentItem | null>;
   schedulePost: (storeId: string, scheduledAt?: string) => Promise<ContentItem | null>;
+  deletePost: (storeId: string, contentId: string) => Promise<boolean>;
+  bulkDeletePosts: (storeId: string, contentIds: string[]) => Promise<number>;
   fetchSavedPosts: (storeId: string, status?: ContentStatus) => Promise<void>;
   clearError: () => void;
   setCurrentPost: (post: ContentItem | null) => void;
@@ -142,6 +171,166 @@ export const useContentStore = create<ContentState>((set, get) => ({
       isRegenerating: false,
       isSaving: false,
     }),
+
+  createNewPost: (storeId: string) => {
+    const tone = get().currentTone;
+    const newDraft: ContentItem = {
+      id: `draft-${Date.now()}`,
+      storeId,
+      productId: null,
+      headline: 'Fresh Brand Post',
+      caption: '',
+      hashtags: [],
+      cta: null,
+      postType: 'ENGAGEMENT',
+      tone: (tone.toUpperCase() as ContentTone) || 'NATURAL',
+      status: 'DRAFT',
+      language: get().currentLanguage,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      product: null,
+      attachedProducts: [],
+    };
+    set({ currentPost: newDraft });
+  },
+
+  attachProductToCurrentPost: async (storeId, product) => {
+    const post = get().currentPost;
+    if (!post) return;
+
+    const existingAttached = post.attachedProducts || [];
+    if (existingAttached.some((ap) => ap.product.id === product.id)) return;
+
+    const newRelation: AttachedProductRelation = {
+      order: existingAttached.length,
+      product: {
+        id: product.id,
+        name: product.name,
+        image: product.image,
+        price: product.price,
+        currency: product.currency,
+        category: product.category,
+        tagline: product.tagline,
+        features: product.features,
+        discount: product.discount,
+      },
+    };
+
+    const updatedAttached = [...existingAttached, newRelation];
+    const updatedPost: ContentItem = {
+      ...post,
+      productId: updatedAttached[0]?.product.id || null,
+      product: updatedAttached[0]?.product || null,
+      attachedProducts: updatedAttached,
+    };
+
+    set({ currentPost: updatedPost });
+
+    // If post already exists in backend, persist the attachment
+    if (!post.id.startsWith('draft-') && storeId) {
+      try {
+        const productIds = updatedAttached.map((ap) => ap.product.id);
+        const saved = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents/${post.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ productIds }),
+          },
+        );
+        set((state) => ({
+          currentPost: saved,
+          savedPosts: state.savedPosts.map((p) => (p.id === saved.id ? saved : p)),
+        }));
+      } catch (err) {
+        console.warn('Failed to sync product attachment to backend:', err);
+      }
+    }
+  },
+
+  detachProductFromCurrentPost: async (storeId, productId) => {
+    const post = get().currentPost;
+    if (!post) return;
+
+    const updatedAttached = (post.attachedProducts || []).filter(
+      (ap) => ap.product.id !== productId,
+    );
+    const updatedPost: ContentItem = {
+      ...post,
+      productId: updatedAttached[0]?.product.id || null,
+      product: updatedAttached[0]?.product || null,
+      attachedProducts: updatedAttached,
+    };
+
+    set({ currentPost: updatedPost });
+
+    // If post already exists in backend, persist the detachment
+    if (!post.id.startsWith('draft-') && storeId) {
+      try {
+        const productIds = updatedAttached.map((ap) => ap.product.id);
+        const saved = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents/${post.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ productIds }),
+          },
+        );
+        set((state) => ({
+          currentPost: saved,
+          savedPosts: state.savedPosts.map((p) => (p.id === saved.id ? saved : p)),
+        }));
+      } catch (err) {
+        console.warn('Failed to sync product detachment to backend:', err);
+      }
+    }
+  },
+
+  setAttachedProductsForCurrentPost: async (storeId, products) => {
+    const post = get().currentPost;
+    if (!post) return;
+
+    const updatedAttached: AttachedProductRelation[] = products.map((p, idx) => ({
+      order: idx,
+      product: {
+        id: p.id,
+        name: p.name,
+        image: p.image,
+        price: p.price,
+        currency: p.currency,
+        category: p.category,
+        tagline: p.tagline,
+        features: p.features,
+        discount: p.discount,
+      },
+    }));
+
+    const updatedPost: ContentItem = {
+      ...post,
+      productId: updatedAttached[0]?.product.id || null,
+      product: updatedAttached[0]?.product || null,
+      attachedProducts: updatedAttached,
+    };
+
+    set({ currentPost: updatedPost });
+
+    if (!post.id.startsWith('draft-') && storeId) {
+      try {
+        const productIds = products.map((p) => p.id);
+        const saved = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents/${post.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ productIds }),
+          },
+        );
+        set((state) => ({
+          currentPost: saved,
+          savedPosts: state.savedPosts.map((p) => (p.id === saved.id ? saved : p)),
+        }));
+      } catch (err) {
+        console.warn('Failed to sync attached products to backend:', err);
+      }
+    }
+  },
 
   setTone: (tone) => set({ currentTone: tone }),
 
@@ -184,6 +373,8 @@ export const useContentStore = create<ContentState>((set, get) => ({
     const selectedLanguage = options.language || get().currentLanguage;
     const toneUpper = selectedTone.toUpperCase();
 
+    const productIds = options.productIds ?? (options.productId ? [options.productId] : undefined);
+
     try {
       const response = await apiClient<{
         content: ContentItem;
@@ -192,6 +383,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
         method: 'POST',
         body: JSON.stringify({
           productId: options.productId || undefined,
+          productIds: productIds && productIds.length > 0 ? productIds : undefined,
           tone: toneUpper,
           language: selectedLanguage,
           customPrompt: options.customPrompt ?? get().customPrompt ?? undefined,
@@ -280,24 +472,49 @@ export const useContentStore = create<ContentState>((set, get) => ({
     if (!post || !storeId) return null;
     set({ isSaving: true, error: null });
 
+    const attachedIds = (post.attachedProducts || []).map((ap) => ap.product.id);
+
     try {
-      const updated = await apiClient<ContentItem>(
-        `/stores/${storeId}/contents/${post.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            headline: post.headline,
-            caption: post.caption,
-            hashtags: post.hashtags,
-            cta: post.cta,
-            status: 'READY',
-          }),
-        },
-      );
+      let updated: ContentItem;
+      if (post.id.startsWith('draft-')) {
+        // Create new post in backend
+        updated = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              headline: post.headline,
+              caption: post.caption,
+              hashtags: post.hashtags,
+              cta: post.cta,
+              postType: post.postType,
+              tone: post.tone,
+              status: 'READY',
+              productIds: attachedIds,
+            }),
+          },
+        );
+      } else {
+        // Update existing post
+        updated = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents/${post.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              headline: post.headline,
+              caption: post.caption,
+              hashtags: post.hashtags,
+              cta: post.cta,
+              status: 'READY',
+              productIds: attachedIds,
+            }),
+          },
+        );
+      }
 
       set((state) => ({
         currentPost: updated,
-        savedPosts: state.savedPosts.map((p) => (p.id === updated.id ? updated : p)),
+        savedPosts: [updated, ...state.savedPosts.filter((p) => p.id !== updated.id)],
         isSaving: false,
       }));
 
@@ -313,24 +530,47 @@ export const useContentStore = create<ContentState>((set, get) => ({
     if (!post || !storeId) return null;
     set({ isSaving: true, error: null });
 
+    const attachedIds = (post.attachedProducts || []).map((ap) => ap.product.id);
+
     try {
-      const updated = await apiClient<ContentItem>(
-        `/stores/${storeId}/contents/${post.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            headline: post.headline,
-            caption: post.caption,
-            hashtags: post.hashtags,
-            cta: post.cta,
-            status: 'APPROVED',
-          }),
-        },
-      );
+      let updated: ContentItem;
+      if (post.id.startsWith('draft-')) {
+        updated = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              headline: post.headline,
+              caption: post.caption,
+              hashtags: post.hashtags,
+              cta: post.cta,
+              postType: post.postType,
+              tone: post.tone,
+              status: 'APPROVED',
+              productIds: attachedIds,
+            }),
+          },
+        );
+      } else {
+        updated = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents/${post.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              headline: post.headline,
+              caption: post.caption,
+              hashtags: post.hashtags,
+              cta: post.cta,
+              status: 'APPROVED',
+              productIds: attachedIds,
+            }),
+          },
+        );
+      }
 
       set((state) => ({
         currentPost: updated,
-        savedPosts: state.savedPosts.map((p) => (p.id === updated.id ? updated : p)),
+        savedPosts: [updated, ...state.savedPosts.filter((p) => p.id !== updated.id)],
         isSaving: false,
       }));
 
@@ -346,24 +586,44 @@ export const useContentStore = create<ContentState>((set, get) => ({
     if (!post || !storeId) return null;
     set({ isSaving: true, error: null });
 
+    const defaultSchedule = scheduledAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const attachedIds = (post.attachedProducts || []).map((ap) => ap.product.id);
+
     try {
-      const defaultSchedule = scheduledAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const updated = await apiClient<ContentItem>(
-        `/stores/${storeId}/contents/${post.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            headline: post.headline,
-            caption: post.caption,
-            status: 'SCHEDULED',
-            scheduledAt: defaultSchedule,
-          }),
-        },
-      );
+      let updated: ContentItem;
+      if (post.id.startsWith('draft-')) {
+        updated = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              headline: post.headline,
+              caption: post.caption,
+              status: 'SCHEDULED',
+              scheduledAt: defaultSchedule,
+              productIds: attachedIds,
+            }),
+          },
+        );
+      } else {
+        updated = await apiClient<ContentItem>(
+          `/stores/${storeId}/contents/${post.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              headline: post.headline,
+              caption: post.caption,
+              status: 'SCHEDULED',
+              scheduledAt: defaultSchedule,
+              productIds: attachedIds,
+            }),
+          },
+        );
+      }
 
       set((state) => ({
         currentPost: updated,
-        savedPosts: state.savedPosts.map((p) => (p.id === updated.id ? updated : p)),
+        savedPosts: [updated, ...state.savedPosts.filter((p) => p.id !== updated.id)],
         isSaving: false,
       }));
 
@@ -372,6 +632,69 @@ export const useContentStore = create<ContentState>((set, get) => ({
       set({ error: err.message || 'Failed to schedule post', isSaving: false });
       throw err;
     }
+  },
+
+  deletePost: async (storeId, contentId) => {
+    if (!storeId || !contentId) return false;
+
+    // Check if it is an unsaved client draft
+    const isLocalDraft = contentId.startsWith('draft-') || contentId.startsWith('post-');
+
+    if (!isLocalDraft) {
+      await apiClient(`/stores/${storeId}/contents/${contentId}`, {
+        method: 'DELETE',
+      });
+    }
+
+    const state = get();
+    const remainingPosts = state.savedPosts.filter((p) => p.id !== contentId);
+    const wasCurrent = state.currentPost?.id === contentId;
+
+    set({
+      savedPosts: remainingPosts,
+      totalSaved: Math.max(0, state.totalSaved - (isLocalDraft ? 0 : 1)),
+      currentPost: wasCurrent
+        ? (remainingPosts[0] || null)
+        : state.currentPost,
+    });
+
+    if (wasCurrent && remainingPosts.length === 0) {
+      get().createNewPost(storeId);
+    }
+
+    return true;
+  },
+
+  bulkDeletePosts: async (storeId, contentIds) => {
+    if (!storeId || !contentIds || contentIds.length === 0) return 0;
+
+    const idsToDelete = new Set(contentIds);
+    const persistedIds = contentIds.filter(
+      (id) => !id.startsWith('draft-') && !id.startsWith('post-'),
+    );
+
+    if (persistedIds.length > 0) {
+      await apiClient<{ count: number }>(`/stores/${storeId}/contents/bulk-delete`, {
+        method: 'POST',
+        body: JSON.stringify({ ids: persistedIds }),
+      });
+    }
+
+    const state = get();
+    const remainingPosts = state.savedPosts.filter((p) => !idsToDelete.has(p.id));
+    const wasCurrentDeleted = state.currentPost && idsToDelete.has(state.currentPost.id);
+
+    set({
+      savedPosts: remainingPosts,
+      totalSaved: Math.max(0, state.totalSaved - persistedIds.length),
+      currentPost: wasCurrentDeleted ? (remainingPosts[0] || null) : state.currentPost,
+    });
+
+    if (wasCurrentDeleted && remainingPosts.length === 0) {
+      get().createNewPost(storeId);
+    }
+
+    return contentIds.length;
   },
 
   fetchSavedPosts: async (storeId, status) => {

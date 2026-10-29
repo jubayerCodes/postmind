@@ -55,6 +55,14 @@ export class ContentController {
     return this.contentService.update(storeId, id, dto);
   }
 
+  @Post('bulk-delete')
+  async removeMany(
+    @Param('storeId') storeId: string,
+    @Body('ids') ids: string[],
+  ): Promise<{ count: number }> {
+    return this.contentService.removeMany(storeId, ids || []);
+  }
+
   @Delete(':id')
   async remove(
     @Param('storeId') storeId: string,

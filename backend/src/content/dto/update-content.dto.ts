@@ -7,6 +7,11 @@ import {
 import { ContentStatus, ContentTone, PostType } from '@prisma/client';
 
 export class UpdateContentDto {
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  productIds?: string[];
+
   @IsString()
   @IsOptional()
   headline?: string;

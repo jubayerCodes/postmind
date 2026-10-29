@@ -154,18 +154,53 @@ export class MetaGraphService implements SocialPlatformProvider {
 
     try {
       const pageId = account.platformAccountId;
+      const images = (payload.imageUrls && payload.imageUrls.length > 0)
+        ? payload.imageUrls.filter(Boolean)
+        : (payload.imageUrl ? [payload.imageUrl] : []);
+
       let endpoint = `${this.graphApiBase}/${pageId}/feed`;
       const bodyParams: Record<string, string> = {
         access_token: decryptedToken,
       };
 
-      if (payload.imageUrl) {
-        // Photo upload with caption
+      if (images.length > 1) {
+        // Multi-photo upload: Upload each image unpublished first, then attach to main feed post
+        const mediaFbids: string[] = [];
+        for (const imgUrl of images) {
+          try {
+            const uploadRes = await fetch(`${this.graphApiBase}/${pageId}/photos`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                access_token: decryptedToken,
+                url: imgUrl,
+                published: 'false',
+              }).toString(),
+            });
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              if (uploadData.id) {
+                mediaFbids.push(uploadData.id);
+              }
+            }
+          } catch (e) {
+            this.logger.warn(`Failed to upload individual photo for multi-image post: ${imgUrl}`, e);
+          }
+        }
+
+        bodyParams.message = payload.message;
+        if (mediaFbids.length > 0) {
+          mediaFbids.forEach((id, index) => {
+            bodyParams[`attached_media[${index}]`] = JSON.stringify({ media_fbid: id });
+          });
+        }
+      } else if (images.length === 1) {
+        // Single photo upload with caption
         endpoint = `${this.graphApiBase}/${pageId}/photos`;
-        bodyParams.url = payload.imageUrl;
+        bodyParams.url = images[0];
         bodyParams.caption = payload.message;
       } else {
-        // Status update / feed message
+        // Text status update / feed message
         bodyParams.message = payload.message;
         if (payload.link) {
           bodyParams.link = payload.link;

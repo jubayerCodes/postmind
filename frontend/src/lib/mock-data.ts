@@ -13,7 +13,8 @@ export interface Product {
 
 export interface SocialPostState {
   id: string;
-  productId: string;
+  productId?: string | null;
+  products?: Product[];
   headline: string;
   caption: string;
   hashtags: string[];

@@ -13,6 +13,9 @@ export class GeneratePostDto {
   @IsOptional()
   productId?: string;
 
+  @IsOptional()
+  productIds?: string[];
+
   @IsEnum(ContentToneEnum)
   @IsOptional()
   @Transform(({ value }) =>

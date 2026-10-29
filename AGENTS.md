@@ -50,5 +50,7 @@
 ## 4. Collaboration Protocol
 
 1. **Ask First**: When facing choices (library selection, schema design alternatives, API structures, UI layout decisions), present the choices with pros/cons and wait for user instruction.
-2. **Iterative & Incremental**: Build one feature/module at a time, ensuring it works and compiles before moving to the next.
-3. **Clean Code Integrity**: Maintain clean formatting, self-documenting code, and preserve existing functionality without unintended side effects.
+2. **Strict Git & Deployment Governance**:
+   > **The AI MUST NOT perform any GitHub tasks (`git commit`, `git push`, branch operations) or trigger any deployments without first explicitly asking the User and receiving explicit permission.**
+3. **Iterative & Incremental**: Build one feature/module at a time, ensuring it works and compiles before moving to the next.
+4. **Clean Code Integrity**: Maintain clean formatting, self-documenting code, and preserve existing functionality without unintended side effects.

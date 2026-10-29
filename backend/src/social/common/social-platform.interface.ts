@@ -13,6 +13,7 @@ export interface PublishPostPayload {
   message: string;
   headline?: string;
   imageUrl?: string | null;
+  imageUrls?: string[];
   cta?: string | null;
   link?: string;
 }

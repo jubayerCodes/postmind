@@ -51,6 +51,11 @@ export function FloatingQuickActions({
           !currentPost.id.startsWith('post-') &&
           !currentPost.id.startsWith('demo-');
 
+        const attachedProductIds = (currentPost?.attachedProducts || []).map((ap) => ap.product.id);
+        const resolvedProductIds = attachedProductIds.length > 0
+          ? attachedProductIds
+          : (currentPost?.productId ? [currentPost.productId] : (selectedProduct?.id ? [selectedProduct.id] : []));
+
         if (hasPersistedPost) {
           await regeneratePost(activeStore.id, currentPost.id, {
             tone: activeTone,
@@ -61,7 +66,7 @@ export function FloatingQuickActions({
           });
         } else {
           await generatePost(activeStore.id, {
-            productId: selectedProduct?.id,
+            productIds: resolvedProductIds.length > 0 ? resolvedProductIds : undefined,
             tone: activeTone,
             language: lang,
             customPrompt: promptInput.trim() || customPrompt || undefined,
@@ -87,6 +92,11 @@ export function FloatingQuickActions({
           !currentPost.id.startsWith('post-') &&
           !currentPost.id.startsWith('demo-');
 
+        const attachedProductIds = (currentPost?.attachedProducts || []).map((ap) => ap.product.id);
+        const resolvedProductIds = attachedProductIds.length > 0
+          ? attachedProductIds
+          : (currentPost?.productId ? [currentPost.productId] : (selectedProduct?.id ? [selectedProduct.id] : []));
+
         if (hasPersistedPost) {
           await regeneratePost(activeStore.id, currentPost.id, {
             tone,
@@ -97,7 +107,7 @@ export function FloatingQuickActions({
           });
         } else {
           await generatePost(activeStore.id, {
-            productId: selectedProduct?.id,
+            productIds: resolvedProductIds.length > 0 ? resolvedProductIds : undefined,
             tone,
             language: currentLanguage,
             customPrompt: promptInput.trim() || customPrompt || undefined,
@@ -123,6 +133,11 @@ export function FloatingQuickActions({
         !currentPost.id.startsWith('post-') &&
         !currentPost.id.startsWith('demo-');
 
+      const attachedProductIds = (currentPost?.attachedProducts || []).map((ap) => ap.product.id);
+      const resolvedProductIds = attachedProductIds.length > 0
+        ? attachedProductIds
+        : (currentPost?.productId ? [currentPost.productId] : (selectedProduct?.id ? [selectedProduct.id] : []));
+
       if (hasPersistedPost) {
         await regeneratePost(activeStore.id, currentPost.id, {
           tone: activeTone,
@@ -133,7 +148,7 @@ export function FloatingQuickActions({
         });
       } else {
         await generatePost(activeStore.id, {
-          productId: selectedProduct?.id,
+          productIds: resolvedProductIds.length > 0 ? resolvedProductIds : undefined,
           tone: activeTone,
           language: currentLanguage,
           customPrompt: trimmedPrompt || undefined,

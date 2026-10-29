@@ -241,7 +241,13 @@ export class SocialService {
   }> {
     const content = await this.prisma.content.findFirst({
       where: { id: contentId, storeId },
-      include: { product: true },
+      include: {
+        product: true,
+        attachedProducts: {
+          include: { product: true },
+          orderBy: { order: 'asc' },
+        },
+      },
     });
 
     if (!content) {
@@ -301,6 +307,16 @@ export class SocialService {
       fullMessage += `\n\n👉 ${content.cta}`;
     }
 
+    const attachedImages = content.attachedProducts
+      .map((ap) => ap.product?.image)
+      .filter((img): img is string => Boolean(img));
+    const allImages =
+      attachedImages.length > 0
+        ? attachedImages
+        : content.product?.image
+          ? [content.product.image]
+          : [];
+
     try {
       const publishResult = await this.metaGraphService.publishPost(
         account,
@@ -308,7 +324,8 @@ export class SocialService {
         {
           message: fullMessage,
           headline: content.headline,
-          imageUrl: content.product?.image || null,
+          imageUrl: allImages[0] || null,
+          imageUrls: allImages,
           cta: content.cta,
         },
       );
@@ -323,7 +340,13 @@ export class SocialService {
           publishError: null,
           metricsLastSyncedAt: new Date(),
         },
-        include: { product: true },
+        include: {
+          product: true,
+          attachedProducts: {
+            include: { product: true },
+            orderBy: { order: 'asc' },
+          },
+        },
       });
 
       return {
@@ -362,7 +385,13 @@ export class SocialService {
   }> {
     const content = await this.prisma.content.findFirst({
       where: { id: contentId, storeId },
-      include: { product: true },
+      include: {
+        product: true,
+        attachedProducts: {
+          include: { product: true },
+          orderBy: { order: 'asc' },
+        },
+      },
     });
 
     if (!content) {

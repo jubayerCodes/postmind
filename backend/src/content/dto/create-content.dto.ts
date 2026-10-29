@@ -13,6 +13,11 @@ export class CreateContentDto {
   @IsOptional()
   productId?: string;
 
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  productIds?: string[];
+
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
