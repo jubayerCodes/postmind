@@ -93,6 +93,7 @@ interface ContentState {
   isRegenerating: boolean;
   isSaving: boolean;
   isLoadingList: boolean;
+  hasLoadedSavedPosts: boolean;
   error: string | null;
   currentTone: 'natural' | 'witty' | 'promo' | 'storytelling';
   currentLanguage: 'en' | 'bn';
@@ -161,7 +162,8 @@ export const useContentStore = create<ContentState>((set, get) => ({
   isGenerating: false,
   isRegenerating: false,
   isSaving: false,
-  isLoadingList: false,
+  isLoadingList: true,
+  hasLoadedSavedPosts: false,
   error: null,
   currentTone: 'natural',
   currentLanguage: 'en',
@@ -179,6 +181,8 @@ export const useContentStore = create<ContentState>((set, get) => ({
       isGenerating: false,
       isRegenerating: false,
       isSaving: false,
+      isLoadingList: true,
+      hasLoadedSavedPosts: false,
     }),
 
   createNewPost: (storeId: string) => {
@@ -741,11 +745,13 @@ export const useContentStore = create<ContentState>((set, get) => ({
         savedPosts: response.contents || [],
         totalSaved: response.total || 0,
         isLoadingList: false,
+        hasLoadedSavedPosts: true,
       });
     } catch (err: any) {
       set({
         error: err.message || 'Failed to load saved posts',
         isLoadingList: false,
+        hasLoadedSavedPosts: true,
       });
     }
   },

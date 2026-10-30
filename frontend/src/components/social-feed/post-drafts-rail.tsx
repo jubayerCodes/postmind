@@ -32,7 +32,7 @@ export function PostDraftsRail({
   onDeletePost,
   onBulkDelete,
 }: PostDraftsRailProps) {
-  const { savedPosts, currentPost, isLoadingList } = useContentStore();
+  const { savedPosts, currentPost, isLoadingList, hasLoadedSavedPosts } = useContentStore();
   const { activeStore } = useStores();
 
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -238,9 +238,24 @@ export function PostDraftsRail({
 
       {/* Posts Scrollable List */}
       <div className="flex-1 overflow-y-auto space-y-2 pr-0.5">
-        {isLoadingList ? (
-          <div className="text-center py-8 text-xs text-[var(--text-secondary)]">
-            Loading posts...
+        {isLoadingList || !hasLoadedSavedPosts ? (
+          <div className="space-y-2.5">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/50 space-y-2 animate-pulse"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-16 bg-[var(--bg-hover)] rounded-full" />
+                  <div className="h-3 w-12 bg-[var(--bg-hover)] rounded" />
+                </div>
+                <div className="h-3.5 w-3/4 bg-[var(--bg-hover)] rounded" />
+                <div className="space-y-1 pt-0.5">
+                  <div className="h-2.5 w-full bg-[var(--bg-hover)] rounded" />
+                  <div className="h-2.5 w-4/5 bg-[var(--bg-hover)] rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-10 px-3">

@@ -20,6 +20,8 @@ export function FloatingQuickActions({
     currentPost,
     currentTone: storeTone,
     currentLanguage,
+    isLoadingList,
+    hasLoadedSavedPosts,
     isGenerating,
     isRegenerating,
     customPrompt,
@@ -30,7 +32,7 @@ export function FloatingQuickActions({
     regeneratePost,
   } = useContentStore();
 
-  const { activeStore } = useStores();
+  const { activeStore, isSwitchingWorkspace } = useStores();
   const { selectedProduct } = useProductsStore();
 
   const [promptInput, setPromptInput] = React.useState('');
@@ -40,6 +42,11 @@ export function FloatingQuickActions({
 
   const isLocked =
     currentPost?.status === 'PUBLISHED' || currentPost?.status === 'APPROVED';
+
+  // Do not render dock while workspace or post is actively loading initially
+  if (!hasLoadedSavedPosts || isSwitchingWorkspace || (isLoadingList && !currentPost)) {
+    return null;
+  }
 
   const handleLanguageClick = async (lang: 'en' | 'bn') => {
     if (isGenerating || isRegenerating || currentLanguage === lang || isLocked) return;

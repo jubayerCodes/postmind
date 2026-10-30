@@ -13,6 +13,7 @@ import { useProductsStore } from '@/stores/products-store';
 import { useSocialStore } from '@/stores/social-store';
 import { Store, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PostCardSkeleton } from '@/components/social-feed/post-card-skeleton';
 
 interface AppShellProps {
   activeTab?: string;
@@ -23,7 +24,9 @@ export function AppShell({ activeTab = 'feed', children }: AppShellProps) {
   const router = useRouter();
   const { user, isDevGuest, isInitialized } = useAuthStore();
   const {
+    stores,
     activeStore,
+    isLoading: isLoadingStores,
     createStore,
     isCreating: isCreatingStore,
     isSwitchingWorkspace,
@@ -98,8 +101,40 @@ export function AppShell({ activeTab = 'feed', children }: AppShellProps) {
               : 'opacity-100 filter blur-0',
           )}
         >
-          {/* View Switcher: No Store Empty Workspace vs Page Content */}
-          {!activeStore ? (
+          {/* View Switcher: Loading Skeleton vs No Store Empty State vs Page Content */}
+          {isLoadingStores ? (
+            <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[var(--bg-main)]">
+              {/* Studio Header Skeleton */}
+              <div className="w-full px-6 py-2.5 shrink-0 flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]/40">
+                <div className="h-6 w-52 bg-[var(--bg-hover)] rounded-md animate-pulse" />
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-20 bg-[var(--bg-hover)] rounded-md animate-pulse" />
+                  <div className="h-7 w-24 bg-[var(--bg-hover)] rounded-md animate-pulse" />
+                </div>
+              </div>
+              {/* Center Feed & Rail Skeletons */}
+              <div className="flex-1 flex overflow-hidden">
+                <div className="flex-1 flex items-center justify-center p-6">
+                  <PostCardSkeleton />
+                </div>
+                <div className="w-80 border-l border-[var(--border-subtle)] p-4 space-y-3 hidden lg:block">
+                  <div className="h-6 w-32 bg-[var(--bg-hover)] rounded animate-pulse" />
+                  <div className="space-y-2.5 pt-2">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/50 space-y-2 animate-pulse"
+                      >
+                        <div className="h-4 w-16 bg-[var(--bg-hover)] rounded-full" />
+                        <div className="h-3 w-3/4 bg-[var(--bg-hover)] rounded" />
+                        <div className="h-2.5 w-full bg-[var(--bg-hover)] rounded" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : !activeStore && stores.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[var(--bg-main)] overflow-y-auto select-none">
               <div className="max-w-md w-full p-8 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-lg shadow-black/5 dark:shadow-black/30 flex flex-col items-center animate-in fade-in-0 zoom-in-95 duration-200">
                 <div className="w-14 h-14 rounded-2xl bg-[var(--brand-primary-light)] text-[var(--brand-primary)] flex items-center justify-center mb-4 shadow-sm">

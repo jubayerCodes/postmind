@@ -54,6 +54,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const {
     stores,
     activeStore,
+    isLoading: isLoadingStores,
     setActiveStoreId,
     isSwitchingWorkspace,
     switchingTargetId,
@@ -122,53 +123,66 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 <div
                   className={cn(
                     'w-6 h-6 rounded flex items-center justify-center shrink-0 transition-colors',
-                    isSwitchingWorkspace
+                    isLoadingStores
+                      ? 'bg-[var(--bg-hover)]'
+                      : isSwitchingWorkspace
                       ? 'bg-[var(--brand-primary-light)] text-[var(--brand-primary)]'
                       : activeStore
                         ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
                         : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
                   )}
                 >
-                  {isSwitchingWorkspace ? (
+                  {isLoadingStores ? (
+                    <div className="w-3 h-3 rounded-full bg-[var(--border-subtle)] animate-pulse" />
+                  ) : isSwitchingWorkspace ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--brand-primary)]" />
                   ) : (
                     <Store className="w-3 h-3" />
                   )}
                 </div>
                 <div className="min-w-0">
-                  <h2
-                    className={cn(
-                      'text-xs font-semibold truncate',
-                      isSwitchingWorkspace
-                        ? 'text-[var(--brand-primary)]'
-                        : activeStore
-                          ? 'text-[var(--text-primary)]'
-                          : 'text-amber-600 dark:text-amber-400',
-                    )}
-                  >
-                    {isSwitchingWorkspace
-                      ? stores.find((s) => s.id === switchingTargetId)?.name || 'Switching...'
-                      : activeStore
-                        ? activeStore.name
-                        : 'No Store Selected'}
-                  </h2>
-                  <div className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)]">
-                    {isSwitchingWorkspace ? (
-                      <span className="text-[var(--brand-primary)] font-medium animate-pulse">
-                        Switching workspace...
-                      </span>
-                    ) : activeStore ? (
-                      <>
-                        <span>{activeStore.currency === 'BDT' ? '🇧🇩 BDT' : '🌐 USD'}</span>
-                        <span>•</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">Online</span>
-                      </>
-                    ) : (
-                      <span className="text-amber-600/90 dark:text-amber-400/90 font-medium">
-                        Create a store first
-                      </span>
-                    )}
-                  </div>
+                  {isLoadingStores ? (
+                    <div className="space-y-1 py-0.5 animate-pulse">
+                      <div className="h-3 w-20 bg-[var(--bg-hover)] rounded" />
+                      <div className="h-2 w-14 bg-[var(--bg-hover)] rounded" />
+                    </div>
+                  ) : (
+                    <>
+                      <h2
+                        className={cn(
+                          'text-xs font-semibold truncate',
+                          isSwitchingWorkspace
+                            ? 'text-[var(--brand-primary)]'
+                            : activeStore
+                              ? 'text-[var(--text-primary)]'
+                              : 'text-amber-600 dark:text-amber-400',
+                        )}
+                      >
+                        {isSwitchingWorkspace
+                          ? stores.find((s) => s.id === switchingTargetId)?.name || 'Switching...'
+                          : activeStore
+                            ? activeStore.name
+                            : 'No Store Selected'}
+                      </h2>
+                      <div className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)]">
+                        {isSwitchingWorkspace ? (
+                          <span className="text-[var(--brand-primary)] font-medium animate-pulse">
+                            Switching workspace...
+                          </span>
+                        ) : activeStore ? (
+                          <>
+                            <span>{activeStore.currency === 'BDT' ? '🇧🇩 BDT' : '🌐 USD'}</span>
+                            <span>•</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-medium">Online</span>
+                          </>
+                        ) : (
+                          <span className="text-amber-600/90 dark:text-amber-400/90 font-medium">
+                            Create a store first
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               {isSwitchingWorkspace ? (

@@ -5,6 +5,7 @@ import { AppShell } from '@/components/navigation/app-shell';
 import { SocialPostCard } from '@/components/social-feed/social-post-card';
 import { FloatingQuickActions } from '@/components/social-feed/floating-quick-actions';
 import { PostDraftsRail } from '@/components/social-feed/post-drafts-rail';
+import { PostCardSkeleton } from '@/components/social-feed/post-card-skeleton';
 import { ProductAttachmentModal } from '@/components/social-feed/product-attachment-modal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -51,6 +52,8 @@ export default function DashboardPage() {
     currentPost,
     savedPosts,
     fetchSavedPosts,
+    isLoadingList,
+    hasLoadedSavedPosts,
     isGenerating,
     isRegenerating,
     isSaving,
@@ -123,12 +126,13 @@ export default function DashboardPage() {
     }
   }, [activeStore?.id, fetchSavedPosts, fetchProducts]);
 
-  // Initial Post Selection or Draft Creation
+  // Initial Post Selection or Draft Creation once saved posts have finished loading
   React.useEffect(() => {
-    if (!activeStore?.id || isSwitchingWorkspace) return;
+    if (!activeStore?.id || isSwitchingWorkspace || !hasLoadedSavedPosts) return;
 
-    // If current post belongs to another store or is empty, select the best post or create a draft
-    if (!currentPost || currentPost.storeId !== activeStore.id) {
+    // Check if current post is missing, belongs to another store, or is a temporary unpersisted draft
+    const isUnsavedDraft = currentPost && isLocalDraftId(currentPost.id);
+    if (!currentPost || currentPost.storeId !== activeStore.id || isUnsavedDraft) {
       if (savedPosts.length > 0) {
         // Prioritize PUBLISHED -> APPROVED -> SCHEDULED -> first saved
         const published = savedPosts.find((p) => p.status === 'PUBLISHED');
@@ -136,7 +140,7 @@ export default function DashboardPage() {
         const scheduled = savedPosts.find((p) => p.status === 'SCHEDULED');
         const best = published || approved || scheduled || savedPosts[0];
         setCurrentPost(best);
-      } else {
+      } else if (!currentPost || currentPost.storeId !== activeStore.id) {
         // No posts exist yet in this store -> initialize a fresh draft
         createNewPost(activeStore.id);
       }
@@ -144,6 +148,7 @@ export default function DashboardPage() {
   }, [
     activeStore?.id,
     isSwitchingWorkspace,
+    hasLoadedSavedPosts,
     savedPosts,
     currentPost,
     setCurrentPost,
@@ -659,33 +664,37 @@ export default function DashboardPage() {
           <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center">
             {/* Social Post Feed Card */}
             <div className="w-full flex-1 flex flex-col items-center justify-center pb-32">
-              <SocialPostCard
-                post={cardPost}
-                product={primaryAttachedProduct}
-                products={attachedStoreProducts}
-                onOpenAttachmentModal={() => setIsAttachmentModalOpen(true)}
-                onDetachProduct={(productId) => {
-                  if (activeStore?.id) {
-                    detachProductFromCurrentPost(activeStore.id, productId);
+              {!hasLoadedSavedPosts || (isLoadingList && !currentPost) || isSwitchingWorkspace ? (
+                <PostCardSkeleton />
+              ) : (
+                <SocialPostCard
+                  post={cardPost}
+                  product={primaryAttachedProduct}
+                  products={attachedStoreProducts}
+                  onOpenAttachmentModal={() => setIsAttachmentModalOpen(true)}
+                  onDetachProduct={(productId) => {
+                    if (activeStore?.id) {
+                      detachProductFromCurrentPost(activeStore.id, productId);
+                    }
+                  }}
+                  onEditCaption={handleCustomCaption}
+                  isGenerating={isGenerating}
+                  onRegeneratePost={handleRegeneratePost}
+                  isRegeneratingPost={isRegenerating}
+                  onRegenerateImage={handleRegenerateImage}
+                  isRegeneratingImage={isRegeneratingImage}
+                  onDeletePost={() => promptDeletePost()}
+                  storeName={
+                    activeConnectedAccount?.accountName ||
+                    activeStore?.name ||
+                    'Store'
                   }
-                }}
-                onEditCaption={handleCustomCaption}
-                isGenerating={isGenerating}
-                onRegeneratePost={handleRegeneratePost}
-                isRegeneratingPost={isRegenerating}
-                onRegenerateImage={handleRegenerateImage}
-                isRegeneratingImage={isRegeneratingImage}
-                onDeletePost={() => promptDeletePost()}
-                storeName={
-                  activeConnectedAccount?.accountName ||
-                  activeStore?.name ||
-                  'Store'
-                }
-                pageAvatarUrl={pageAvatarUrl}
-                onSyncMetrics={handleManualSyncMetrics}
-                isSyncingMetrics={isSyncingMetrics}
-                metricsLastSyncedAt={currentPost?.metricsLastSyncedAt || null}
-              />
+                  pageAvatarUrl={pageAvatarUrl}
+                  onSyncMetrics={handleManualSyncMetrics}
+                  isSyncingMetrics={isSyncingMetrics}
+                  metricsLastSyncedAt={currentPost?.metricsLastSyncedAt || null}
+                />
+              )}
             </div>
           </main>
 
