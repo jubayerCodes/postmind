@@ -31,7 +31,7 @@ import { useBrandTheme } from '@/components/theme-brand-provider';
 import { useAuthStore } from '@/stores/auth-store';
 import { useStores } from '@/hooks/use-stores';
 import { useProductsStore, Product as StoreProduct } from '@/stores/products-store';
-import { useContentStore, ContentItem } from '@/stores/content-store';
+import { useContentStore, ContentItem, isLocalDraftId } from '@/stores/content-store';
 import { useSocialStore } from '@/stores/social-store';
 import { useCalendarStore } from '@/stores/calendar-store';
 
@@ -157,8 +157,7 @@ export default function DashboardPage() {
       !activeStore?.id ||
       !currentPost?.id ||
       currentPost.status !== 'PUBLISHED' ||
-      currentPost.id.startsWith('draft-') ||
-      currentPost.id.startsWith('post-') ||
+      isLocalDraftId(currentPost.id) ||
       currentPost.id === lastSyncedContentIdRef.current
     ) {
       return;
@@ -342,7 +341,7 @@ export default function DashboardPage() {
     try {
       // If it's still a draft not saved to backend, save it first
       let targetPostId = currentPost.id;
-      if (currentPost.id.startsWith('draft-')) {
+      if (isLocalDraftId(currentPost.id)) {
         const saved = await approvePost(activeStore.id);
         if (!saved) return;
         targetPostId = saved.id;
@@ -376,11 +375,7 @@ export default function DashboardPage() {
     if (currentPost?.status === 'PUBLISHED' || currentPost?.status === 'APPROVED') return;
     try {
       const productIds = attachedStoreProducts.map((p) => p.id);
-      if (
-        currentPost?.id &&
-        !currentPost.id.startsWith('draft-') &&
-        !currentPost.id.startsWith('post-')
-      ) {
+      if (currentPost?.id && !isLocalDraftId(currentPost.id)) {
         await regeneratePost(activeStore.id, currentPost.id, {
           tone: currentTone,
           language: currentLanguage,

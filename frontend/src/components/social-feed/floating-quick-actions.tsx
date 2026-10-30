@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Sparkles, Tag, BookOpen, Feather, Send, Loader2, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useContentStore } from '@/stores/content-store';
+import { useContentStore, isLocalDraftId } from '@/stores/content-store';
 import { useStores } from '@/hooks/use-stores';
 import { useProductsStore } from '@/stores/products-store';
 
@@ -46,17 +46,14 @@ export function FloatingQuickActions({
     setLanguage(lang);
     if (activeStore?.id) {
       try {
-        const hasPersistedPost =
-          currentPost?.id &&
-          !currentPost.id.startsWith('post-') &&
-          !currentPost.id.startsWith('demo-');
+        const hasPersistedPost = !isLocalDraftId(currentPost?.id);
 
         const attachedProductIds = (currentPost?.attachedProducts || []).map((ap) => ap.product.id);
         const resolvedProductIds = attachedProductIds.length > 0
           ? attachedProductIds
           : (currentPost?.productId ? [currentPost.productId] : (selectedProduct?.id ? [selectedProduct.id] : []));
 
-        if (hasPersistedPost) {
+        if (hasPersistedPost && currentPost) {
           await regeneratePost(activeStore.id, currentPost.id, {
             tone: activeTone,
             language: lang,
@@ -87,17 +84,14 @@ export function FloatingQuickActions({
 
     if (activeStore?.id) {
       try {
-        const hasPersistedPost =
-          currentPost?.id &&
-          !currentPost.id.startsWith('post-') &&
-          !currentPost.id.startsWith('demo-');
+        const hasPersistedPost = !isLocalDraftId(currentPost?.id);
 
         const attachedProductIds = (currentPost?.attachedProducts || []).map((ap) => ap.product.id);
         const resolvedProductIds = attachedProductIds.length > 0
           ? attachedProductIds
           : (currentPost?.productId ? [currentPost.productId] : (selectedProduct?.id ? [selectedProduct.id] : []));
 
-        if (hasPersistedPost) {
+        if (hasPersistedPost && currentPost) {
           await regeneratePost(activeStore.id, currentPost.id, {
             tone,
             language: currentLanguage,
@@ -128,17 +122,14 @@ export function FloatingQuickActions({
     const trimmedPrompt = promptInput.trim();
     setCustomPrompt(trimmedPrompt);
     try {
-      const hasPersistedPost =
-        currentPost?.id &&
-        !currentPost.id.startsWith('post-') &&
-        !currentPost.id.startsWith('demo-');
+      const hasPersistedPost = !isLocalDraftId(currentPost?.id);
 
       const attachedProductIds = (currentPost?.attachedProducts || []).map((ap) => ap.product.id);
       const resolvedProductIds = attachedProductIds.length > 0
         ? attachedProductIds
         : (currentPost?.productId ? [currentPost.productId] : (selectedProduct?.id ? [selectedProduct.id] : []));
 
-      if (hasPersistedPost) {
+      if (hasPersistedPost && currentPost) {
         await regeneratePost(activeStore.id, currentPost.id, {
           tone: activeTone,
           language: currentLanguage,
@@ -251,10 +242,10 @@ export function FloatingQuickActions({
                   />
                   <button
                     type="submit"
-                    disabled={isGenerating}
+                    disabled={isGenerating || isRegenerating}
                     className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--brand-primary)] text-white hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
                   >
-                    {isGenerating ? (
+                    {isGenerating || isRegenerating ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <Send className="w-3.5 h-3.5" />
@@ -331,7 +322,7 @@ export function FloatingQuickActions({
                     <button
                       key={btn.id}
                       onClick={() => handleToneClick(btn.id)}
-                      disabled={isGenerating}
+                      disabled={isGenerating || isRegenerating}
                       className={cn(
                         'py-2 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer border select-none disabled:opacity-60',
                         isActive
@@ -339,7 +330,7 @@ export function FloatingQuickActions({
                           : 'bg-[var(--bg-hover)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--brand-primary)] hover:bg-[var(--bg-card)]'
                       )}
                     >
-                      {isGenerating && isActive ? (
+                      {(isGenerating || isRegenerating) && isActive ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
                         <Icon className="w-3.5 h-3.5 shrink-0" />

@@ -76,6 +76,15 @@ export interface SocialPostOutput {
   suggestedPublishTime?: string;
 }
 
+/**
+ * Checks whether a content ID is an unpersisted client-side draft.
+ * Prevents 404s when attempting to regenerate or patch unsaved local drafts.
+ */
+export function isLocalDraftId(id: string | null | undefined): boolean {
+  if (!id) return true;
+  return id.startsWith('draft-') || id.startsWith('post-') || id.startsWith('demo-');
+}
+
 interface ContentState {
   currentPost: ContentItem | null;
   savedPosts: ContentItem[];
@@ -227,7 +236,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
     set({ currentPost: updatedPost });
 
     // If post already exists in backend, persist the attachment
-    if (!post.id.startsWith('draft-') && storeId) {
+    if (!isLocalDraftId(post.id) && storeId) {
       try {
         const productIds = updatedAttached.map((ap) => ap.product.id);
         const saved = await apiClient<ContentItem>(
@@ -264,7 +273,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
     set({ currentPost: updatedPost });
 
     // If post already exists in backend, persist the detachment
-    if (!post.id.startsWith('draft-') && storeId) {
+    if (!isLocalDraftId(post.id) && storeId) {
       try {
         const productIds = updatedAttached.map((ap) => ap.product.id);
         const saved = await apiClient<ContentItem>(
@@ -312,7 +321,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
     set({ currentPost: updatedPost });
 
-    if (!post.id.startsWith('draft-') && storeId) {
+    if (!isLocalDraftId(post.id) && storeId) {
       try {
         const productIds = products.map((p) => p.id);
         const saved = await apiClient<ContentItem>(
@@ -421,11 +430,31 @@ export const useContentStore = create<ContentState>((set, get) => ({
     const targetId = contentId || get().currentPost?.id;
     if (!targetId) throw new Error('No post available to regenerate');
 
-    set({ isRegenerating: true, error: null });
-
     const selectedTone = options.tone || get().currentTone;
     const selectedLanguage = options.language || get().currentLanguage;
     const toneUpper = selectedTone.toUpperCase();
+
+    // If target is an unpersisted local draft, route cleanly to generatePost
+    if (isLocalDraftId(targetId)) {
+      const current = get().currentPost;
+      const attachedProductIds = (current?.attachedProducts || []).map((ap) => ap.product.id);
+      const productIds = attachedProductIds.length > 0
+        ? attachedProductIds
+        : (current?.productId ? [current.productId] : undefined);
+
+      return get().generatePost(storeId, {
+        productId: productIds?.[0],
+        productIds: productIds && productIds.length > 0 ? productIds : undefined,
+        tone: selectedTone,
+        language: selectedLanguage,
+        customPrompt: options.customPrompt ?? get().customPrompt ?? undefined,
+        offerDetails: options.offerDetails || undefined,
+        sourceHeadline: options.sourceHeadline || (current?.headline !== 'Fresh Brand Post' ? current?.headline : undefined),
+        sourceCaption: options.sourceCaption || (current?.caption ? current.caption : undefined),
+      });
+    }
+
+    set({ isRegenerating: true, error: null });
 
     try {
       const response = await apiClient<{
@@ -476,7 +505,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
     try {
       let updated: ContentItem;
-      if (post.id.startsWith('draft-')) {
+      if (isLocalDraftId(post.id)) {
         // Create new post in backend
         updated = await apiClient<ContentItem>(
           `/stores/${storeId}/contents`,
@@ -534,7 +563,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
     try {
       let updated: ContentItem;
-      if (post.id.startsWith('draft-')) {
+      if (isLocalDraftId(post.id)) {
         updated = await apiClient<ContentItem>(
           `/stores/${storeId}/contents`,
           {
@@ -591,7 +620,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
     try {
       let updated: ContentItem;
-      if (post.id.startsWith('draft-')) {
+      if (isLocalDraftId(post.id)) {
         updated = await apiClient<ContentItem>(
           `/stores/${storeId}/contents`,
           {
@@ -638,7 +667,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
     if (!storeId || !contentId) return false;
 
     // Check if it is an unsaved client draft
-    const isLocalDraft = contentId.startsWith('draft-') || contentId.startsWith('post-');
+    const isLocalDraft = isLocalDraftId(contentId);
 
     if (!isLocalDraft) {
       await apiClient(`/stores/${storeId}/contents/${contentId}`, {
@@ -669,9 +698,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
     if (!storeId || !contentIds || contentIds.length === 0) return 0;
 
     const idsToDelete = new Set(contentIds);
-    const persistedIds = contentIds.filter(
-      (id) => !id.startsWith('draft-') && !id.startsWith('post-'),
-    );
+    const persistedIds = contentIds.filter((id) => !isLocalDraftId(id));
 
     if (persistedIds.length > 0) {
       await apiClient<{ count: number }>(`/stores/${storeId}/contents/bulk-delete`, {
