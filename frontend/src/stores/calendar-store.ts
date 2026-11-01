@@ -85,17 +85,29 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         };
       });
 
-      // Synchronize ContentStore currentPost
+      // Synchronize ContentStore (both currentPost and savedPosts)
       const contentState = useContentStore.getState();
-      if (contentState.currentPost && contentState.currentPost.id === contentId) {
-        useContentStore.setState({
-          currentPost: {
-            ...contentState.currentPost,
-            status: 'SCHEDULED',
-            scheduledAt: updated.scheduledAt,
-          },
-        });
-      }
+      const updatedSavedPosts = contentState.savedPosts.map((p) =>
+        p.id === contentId
+          ? {
+              ...p,
+              status: 'SCHEDULED' as const,
+              scheduledAt: updated.scheduledAt,
+            }
+          : p
+      );
+
+      useContentStore.setState({
+        savedPosts: updatedSavedPosts,
+        currentPost:
+          contentState.currentPost && contentState.currentPost.id === contentId
+            ? {
+                ...contentState.currentPost,
+                status: 'SCHEDULED',
+                scheduledAt: updated.scheduledAt,
+              }
+            : contentState.currentPost,
+      });
 
       return updated;
     } catch (err: any) {
@@ -129,17 +141,29 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         };
       });
 
-      // Synchronize ContentStore currentPost
+      // Synchronize ContentStore (both currentPost and savedPosts)
       const contentState = useContentStore.getState();
-      if (contentState.currentPost && contentState.currentPost.id === contentId) {
-        useContentStore.setState({
-          currentPost: {
-            ...contentState.currentPost,
-            status: 'READY',
-            scheduledAt: null,
-          },
-        });
-      }
+      const updatedSavedPosts = contentState.savedPosts.map((p) =>
+        p.id === contentId
+          ? {
+              ...p,
+              status: 'READY' as const,
+              scheduledAt: null,
+            }
+          : p
+      );
+
+      useContentStore.setState({
+        savedPosts: updatedSavedPosts,
+        currentPost:
+          contentState.currentPost && contentState.currentPost.id === contentId
+            ? {
+                ...contentState.currentPost,
+                status: 'READY',
+                scheduledAt: null,
+              }
+            : contentState.currentPost,
+      });
 
       return updated;
     } catch (err: any) {

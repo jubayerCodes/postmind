@@ -12,7 +12,6 @@ import {
   Package,
   Layers,
   Percent,
-  Loader2,
   AlertCircle,
   ExternalLink,
   UploadCloud,
@@ -20,6 +19,7 @@ import {
 import { useProductsStore, Product } from '@/stores/products-store';
 import { useStores } from '@/hooks/use-stores';
 import { BulkImportWorkspace } from './bulk-import-workspace';
+import { ProductCardSkeleton } from './product-card-skeleton';
 
 interface ProductsViewProps {
   onSelectForStudio: (product: Product) => void;
@@ -247,9 +247,10 @@ export function ProductsView({ onSelectForStudio }: ProductsViewProps) {
         )}
 
         {isLoading ? (
-          <div className="h-64 flex flex-col items-center justify-center text-[var(--text-secondary)] gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)]" />
-            <span className="text-xs">Loading products...</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <ProductCardSkeleton key={idx} />
+            ))}
           </div>
         ) : products.length === 0 ? (
           <div className="h-80 flex flex-col items-center justify-center border-2 border-dashed border-[var(--border-subtle)] rounded-xl p-8 text-center bg-[var(--bg-card)]/30">

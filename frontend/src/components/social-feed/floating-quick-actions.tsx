@@ -43,9 +43,27 @@ export function FloatingQuickActions({
   const isLocked =
     currentPost?.status === 'PUBLISHED' || currentPost?.status === 'APPROVED';
 
-  // Do not render dock while workspace or post is actively loading initially
+  // Skeleton dock while workspace or post is actively loading initially
   if (!hasLoadedSavedPosts || isSwitchingWorkspace || (isLoadingList && !currentPost)) {
-    return null;
+    return (
+      <>
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-44 select-none overflow-hidden z-20"
+          aria-hidden="true"
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--bg-main)]/40 to-[var(--bg-main)]/95" />
+        </div>
+        <div className="absolute bottom-5 inset-x-0 z-30 flex flex-col items-center px-4 pointer-events-none select-none">
+          <div className="pointer-events-auto max-w-lg w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-[var(--bg-card)]/95 backdrop-blur-xl border border-[var(--border-subtle)] shadow-xl text-xs font-medium">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)]/40 skeleton-shimmer" />
+              <div className="h-3 w-48 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
+            </div>
+            <div className="h-4 w-16 rounded bg-[var(--bg-hover)]/70 border border-[var(--border-subtle)] skeleton-shimmer" />
+          </div>
+        </div>
+      </>
+    );
   }
 
   const handleLanguageClick = async (lang: 'en' | 'bn') => {

@@ -124,7 +124,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                   className={cn(
                     'w-6 h-6 rounded flex items-center justify-center shrink-0 transition-colors',
                     isLoadingStores
-                      ? 'bg-[var(--bg-hover)]'
+                      ? 'bg-[var(--bg-hover)]/60 text-[var(--text-secondary)]'
                       : isSwitchingWorkspace
                       ? 'bg-[var(--brand-primary-light)] text-[var(--brand-primary)]'
                       : activeStore
@@ -133,7 +133,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                   )}
                 >
                   {isLoadingStores ? (
-                    <div className="w-3 h-3 rounded-full bg-[var(--border-subtle)] animate-pulse" />
+                    <Store className="w-3 h-3 text-[var(--text-secondary)] opacity-60 animate-pulse" />
                   ) : isSwitchingWorkspace ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--brand-primary)]" />
                   ) : (
@@ -142,9 +142,9 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 </div>
                 <div className="min-w-0">
                   {isLoadingStores ? (
-                    <div className="space-y-1 py-0.5 animate-pulse">
-                      <div className="h-3 w-20 bg-[var(--bg-hover)] rounded" />
-                      <div className="h-2 w-14 bg-[var(--bg-hover)] rounded" />
+                    <div className="space-y-1 py-0.5">
+                      <div className="h-3 w-24 bg-[var(--bg-hover)] rounded skeleton-shimmer" />
+                      <div className="h-2 w-16 bg-[var(--bg-hover)]/70 rounded skeleton-shimmer" />
                     </div>
                   ) : (
                     <>

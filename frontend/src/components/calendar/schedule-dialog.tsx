@@ -56,12 +56,14 @@ export function ScheduleDialog() {
   };
 
   const [selectedDateTime, setSelectedDateTime] = React.useState(getInitialTime);
-  const [activePreset, setActivePreset] = React.useState<string | null>('today-peak');
+  const [activePreset, setActivePreset] = React.useState<string | null>(() =>
+    targetPost?.scheduledAt ? null : 'today-peak'
+  );
 
   React.useEffect(() => {
     if (isScheduleModalOpen) {
       setSelectedDateTime(getInitialTime());
-      setActivePreset('today-peak');
+      setActivePreset(targetPost?.scheduledAt ? null : 'today-peak');
     }
   }, [isScheduleModalOpen, targetPost]);
 

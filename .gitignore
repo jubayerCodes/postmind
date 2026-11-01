@@ -39,5 +39,7 @@ Thumbs.db
 .idea/
 
 # Graphify Output & Cache (Knowledge Graph Generator)
-graphify-out/
+# Only important outputs (graph.json, GRAPH_REPORT.md, index.html) should be tracked
 .graphify_*
+graphify-out/.*
+graphify-out/cache/

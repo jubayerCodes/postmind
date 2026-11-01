@@ -24,10 +24,19 @@ async function bootstrap(): Promise<void> {
   ];
 
   if (configService.get<string>('NODE_ENV') !== 'production') {
-    allowedOrigins.push(/https?:\/\/.*\.ngrok-free\.app/);
+    allowedOrigins.push(/https?:\/\/.*\.ngrok-free\.(app|dev)/);
+    allowedOrigins.push(/https?:\/\/.*\.ngrok\.app/);
     allowedOrigins.push(/https?:\/\/.*\.ngrok\.io/);
     allowedOrigins.push(/https?:\/\/.*\.trycloudflare\.com/);
   }
+
+  // Support Chrome Private Network Access (PNA) preflights
+  app.use((req: any, res: any, next: any) => {
+    if (req.headers['access-control-request-private-network']) {
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+    next();
+  });
 
   app.enableCors({
     origin: allowedOrigins,
@@ -49,7 +58,7 @@ async function bootstrap(): Promise<void> {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   logger.log(`🚀 PostMind Backend running on http://localhost:${port}`);
 }
 

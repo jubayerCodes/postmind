@@ -39,7 +39,7 @@ import { useCalendarStore } from '@/stores/calendar-store';
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isDevGuest, isInitialized } = useAuthStore();
-  const { activeStore, isSwitchingWorkspace } = useStores();
+  const { activeStore, isSwitchingWorkspace, isLoading: isLoadingStores } = useStores();
 
   const {
     products,
@@ -126,13 +126,31 @@ export default function DashboardPage() {
     }
   }, [activeStore?.id, fetchSavedPosts, fetchProducts]);
 
+  // Track whether initial post selection has completed for the current active store
+  const initialSelectedStoreIdRef = React.useRef<string | null>(null);
+  const mainScrollRef = React.useRef<HTMLElement>(null);
+
+  // Reset initial selection tracker when switching workspaces
+  React.useEffect(() => {
+    if (isSwitchingWorkspace) {
+      initialSelectedStoreIdRef.current = null;
+    }
+  }, [isSwitchingWorkspace]);
+
   // Initial Post Selection or Draft Creation once saved posts have finished loading
   React.useEffect(() => {
     if (!activeStore?.id || isSwitchingWorkspace || !hasLoadedSavedPosts) return;
 
-    // Check if current post is missing, belongs to another store, or is a temporary unpersisted draft
-    const isUnsavedDraft = currentPost && isLocalDraftId(currentPost.id);
-    if (!currentPost || currentPost.storeId !== activeStore.id || isUnsavedDraft) {
+    // If initial selection has already completed for this store and currentPost belongs to this store, do not overwrite user intent
+    if (
+      initialSelectedStoreIdRef.current === activeStore.id &&
+      currentPost &&
+      currentPost.storeId === activeStore.id
+    ) {
+      return;
+    }
+
+    if (!currentPost || currentPost.storeId !== activeStore.id) {
       if (savedPosts.length > 0) {
         // Prioritize PUBLISHED -> APPROVED -> SCHEDULED -> first saved
         const published = savedPosts.find((p) => p.status === 'PUBLISHED');
@@ -140,10 +158,11 @@ export default function DashboardPage() {
         const scheduled = savedPosts.find((p) => p.status === 'SCHEDULED');
         const best = published || approved || scheduled || savedPosts[0];
         setCurrentPost(best);
-      } else if (!currentPost || currentPost.storeId !== activeStore.id) {
+      } else {
         // No posts exist yet in this store -> initialize a fresh draft
         createNewPost(activeStore.id);
       }
+      initialSelectedStoreIdRef.current = activeStore.id;
     }
   }, [
     activeStore?.id,
@@ -229,14 +248,6 @@ export default function DashboardPage() {
     return [];
   }, [currentPost, activeStore?.currency]);
 
-  if (!isInitialized || (!user && !isDevGuest)) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg-main)] text-[var(--text-primary)]">
-        <Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)]" />
-      </div>
-    );
-  }
-
   const primaryAttachedProduct = attachedStoreProducts[0] || null;
 
   // Normalized SocialPostState for SocialPostCard
@@ -274,11 +285,35 @@ export default function DashboardPage() {
     sharesCount: currentPost?.sharesCount ?? 0,
     image: primaryAttachedProduct?.image || '',
     tone: currentTone,
+    scheduledTime: currentPost?.scheduledAt || undefined,
   };
+
+  const formattedScheduledTime = React.useMemo(() => {
+    const rawTime = currentPost?.scheduledAt;
+    if (!rawTime) {
+      return suggestedTime || '8:00 PM';
+    }
+    const d = new Date(rawTime);
+    if (isNaN(d.getTime())) {
+      return suggestedTime || '8:00 PM';
+    }
+
+    const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const isTomorrow = d.toDateString() === tomorrow.toDateString();
+
+    if (isToday) return timeStr;
+    if (isTomorrow) return `Tomorrow, ${timeStr}`;
+    return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
+  }, [currentPost?.scheduledAt, suggestedTime]);
 
   const handleNewPost = () => {
     if (!activeStore?.id) return;
     createNewPost(activeStore.id);
+    mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectPost = (post: ContentItem) => {
@@ -566,6 +601,11 @@ export default function DashboardPage() {
               <button
                 onClick={handleSchedule}
                 disabled={isSaving || isGenerating || isPublishing}
+                title={
+                  currentPost?.scheduledAt
+                    ? `Scheduled for ${new Date(currentPost.scheduledAt).toLocaleString()}`
+                    : 'Schedule post'
+                }
                 className={cn(
                   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer border shadow-2xs disabled:opacity-60',
                   cardPost.status === 'SCHEDULED'
@@ -576,7 +616,7 @@ export default function DashboardPage() {
                 {cardPost.status === 'SCHEDULED' ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Scheduled ({suggestedTime || '8:00 PM'})</span>
+                    <span>Scheduled ({formattedScheduledTime})</span>
                   </>
                 ) : (
                   <>
@@ -661,10 +701,10 @@ export default function DashboardPage() {
           </div>
 
           {/* Scrollable Center Feed */}
-          <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center">
+          <main ref={mainScrollRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center">
             {/* Social Post Feed Card */}
             <div className="w-full flex-1 flex flex-col items-center justify-center pb-32">
-              {!hasLoadedSavedPosts || (isLoadingList && !currentPost) || isSwitchingWorkspace ? (
+              {!isInitialized || isLoadingStores || !hasLoadedSavedPosts || (isLoadingList && !currentPost) || isSwitchingWorkspace ? (
                 <PostCardSkeleton />
               ) : (
                 <SocialPostCard

@@ -54,3 +54,11 @@
    > **The AI MUST NOT perform any GitHub tasks (`git commit`, `git push`, branch operations) or trigger any deployments without first explicitly asking the User and receiving explicit permission.**
 3. **Iterative & Incremental**: Build one feature/module at a time, ensuring it works and compiles before moving to the next.
 4. **Clean Code Integrity**: Maintain clean formatting, self-documenting code, and preserve existing functionality without unintended side effects.
+
+---
+
+## 5. Codebase Exploration & Architecture Context (Graphify First)
+
+1. **Always Query Graphify First**: Whenever agents need to understand system architecture, module boundaries, inter-service connectivity, file relationships, or call graphs, agents **MUST consult Graphify first** (via Graphify MCP tools like `query_graph`, `god_nodes`, `shortest_path`, or by reading `graphify-out/graph.json` and `graphify-out/GRAPH_REPORT.md`) rather than doing unguided full-directory scans or blind file-by-file searches.
+2. **Keep the Graph Synchronized**: When significant architectural changes, new modules, or cross-service dependencies are added, regenerate or update the knowledge graph (`graphify export` / update) so the graph remains up to date.
+3. **Commit Governance for Graphify Artifacts**: Only primary artifacts (`graphify-out/graph.json`, `graphify-out/GRAPH_REPORT.md`, `graphify-out/index.html`) are tracked in version control. All internal caches, AST dumps, and local Python path files are strictly ignored.

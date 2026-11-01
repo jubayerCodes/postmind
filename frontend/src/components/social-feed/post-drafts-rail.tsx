@@ -239,20 +239,33 @@ export function PostDraftsRail({
       {/* Posts Scrollable List */}
       <div className="flex-1 overflow-y-auto space-y-2 pr-0.5">
         {isLoadingList || !hasLoadedSavedPosts ? (
-          <div className="space-y-2.5">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/50 space-y-2 animate-pulse"
+                className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] select-none space-y-2"
               >
-                <div className="flex items-center justify-between">
-                  <div className="h-4 w-16 bg-[var(--bg-hover)] rounded-full" />
-                  <div className="h-3 w-12 bg-[var(--bg-hover)] rounded" />
+                {/* Top Row: Status badge pill & date */}
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <div className="h-4 w-24 rounded bg-emerald-500/10 border border-emerald-500/20 skeleton-shimmer" />
+                  <div className="h-2.5 w-10 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
                 </div>
-                <div className="h-3.5 w-3/4 bg-[var(--bg-hover)] rounded" />
-                <div className="space-y-1 pt-0.5">
-                  <div className="h-2.5 w-full bg-[var(--bg-hover)] rounded" />
-                  <div className="h-2.5 w-4/5 bg-[var(--bg-hover)] rounded" />
+
+                {/* Headline & Caption snippet */}
+                <div className="space-y-1">
+                  <div className="h-3.5 w-11/12 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
+                  <div className="h-3.5 w-3/4 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
+                  <div className="h-2.5 w-full rounded bg-[var(--bg-hover)]/70 skeleton-shimmer mt-1" />
+                  <div className="h-2.5 w-4/5 rounded bg-[var(--bg-hover)]/70 skeleton-shimmer" />
+                </div>
+
+                {/* Attached Products Row */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border-subtle)]/40 text-[10px]">
+                  <div className="flex items-center gap-1.5">
+                    <ShoppingBag className="w-3 h-3 text-[var(--brand-primary)]/40 shrink-0" />
+                    <div className="h-2.5 w-28 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
+                  </div>
+                  <div className="h-3.5 w-12 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
                 </div>
               </div>
             ))}
@@ -333,8 +346,23 @@ export function PostDraftsRail({
                         <Check className="w-2.5 h-2.5" /> Approved
                       </span>
                     ) : post.status === 'SCHEDULED' ? (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">
-                        <Clock className="w-2.5 h-2.5" /> Scheduled
+                      <span
+                        title={
+                          post.scheduledAt
+                            ? `Scheduled for ${new Date(post.scheduledAt).toLocaleString()}`
+                            : 'Scheduled'
+                        }
+                        className="inline-flex items-center gap-1 text-[9px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded"
+                      >
+                        <Clock className="w-2.5 h-2.5" />
+                        <span>
+                          {post.scheduledAt
+                            ? new Date(post.scheduledAt).toLocaleTimeString([], {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })
+                            : 'Scheduled'}
+                        </span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[9px] font-medium text-[var(--text-secondary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded">
