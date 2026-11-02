@@ -35,6 +35,7 @@ export function AppShell({ activeTab = 'feed', children }: AppShellProps) {
   const { fetchProducts } = useProductsStore();
   const { fetchAccounts } = useSocialStore();
   const lastLoadedStoreIdRef = React.useRef<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (isInitialized && !user && !isDevGuest) {
@@ -68,8 +69,12 @@ export function AppShell({ activeTab = 'feed', children }: AppShellProps) {
       {/* Global Schedule Dialog Modal */}
       <ScheduleDialog />
 
-      {/* 1. Left Sidebar Navigation */}
-      <Sidebar activeTab={activeTab} />
+      {/* 1. Left Sidebar Navigation (Desktop persistent + Mobile slide-over) */}
+      <Sidebar
+        activeTab={activeTab}
+        isMobileOpen={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
+      />
 
       {/* 2. Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
@@ -81,7 +86,7 @@ export function AppShell({ activeTab = 'feed', children }: AppShellProps) {
         )}
 
         {/* Top Header */}
-        <Header />
+        <Header onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
 
         {/* Content with smooth cross-fade transition */}
         <div

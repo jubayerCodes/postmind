@@ -14,21 +14,34 @@ import {
   Check,
   Loader2,
   X,
+  Menu,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemeBrandToggle } from '@/components/theme-brand-toggle';
 import { useAuthStore } from '@/stores/auth-store';
+import { useSocialStore } from '@/stores/social-store';
 import { cn } from '@/lib/utils';
 
-export function Header() {
+interface HeaderProps {
+  onOpenMobileMenu?: () => void;
+}
+
+export function Header({ onOpenMobileMenu }: HeaderProps = {}) {
   const router = useRouter();
   const { user, isDevGuest, stores, signOut, updateProfile, isLoading } = useAuthStore();
+  const { accounts, selectedAccountId, setModalOpen } = useSocialStore();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
   const [nameInput, setNameInput] = React.useState('');
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
   const [profileSuccessMessage, setProfileSuccessMessage] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const activeSocialAccount =
+    accounts.find((a) => a.id === selectedAccountId) ||
+    accounts[0] ||
+    null;
+  const isSocialConnected = accounts.length > 0;
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -98,13 +111,46 @@ export function Header() {
 
   return (
     <>
-      <header className="relative z-30 h-14 border-b border-[var(--border-subtle)] bg-[var(--bg-card)] px-6 flex items-center justify-between shrink-0 transition-colors select-none">
-        {/* Left: Channel Live Status */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-            <span className="font-semibold">Meta Social Connected</span>
-          </div>
+      <header className="relative z-30 h-14 border-b border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 sm:px-6 flex items-center justify-between shrink-0 transition-colors select-none">
+        {/* Left: Mobile Menu Toggle & Channel Live Status */}
+        <div className="flex items-center gap-2.5">
+          {/* Mobile Menu Hamburger (Visible < md) */}
+          <button
+            type="button"
+            onClick={onOpenMobileMenu}
+            className="md:hidden p-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+
+          {/* Dynamic Social Connection Status */}
+          {isSocialConnected ? (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              title="Manage connected Meta Facebook pages"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-500/15 transition-colors cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              <span className="font-semibold truncate max-w-[120px] sm:max-w-[200px]">
+                {activeSocialAccount ? activeSocialAccount.accountName : 'Meta Connected'}
+              </span>
+              <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 hidden sm:inline">
+                ({accounts.length})
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              title="Connect a Facebook Page to publish AI posts"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium hover:bg-amber-500/15 transition-colors cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+              <span className="font-semibold">Connect Meta Page</span>
+            </button>
+          )}
         </div>
 
         {/* Right Controls */}

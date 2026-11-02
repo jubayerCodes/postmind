@@ -14,6 +14,7 @@ import {
   Plus,
   Pencil,
   Loader2,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -25,9 +26,16 @@ import { useSocialStore } from '@/stores/social-store';
 interface SidebarProps {
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export function Sidebar({
+  activeTab,
+  setActiveTab,
+  isMobileOpen = false,
+  onCloseMobile,
+}: SidebarProps) {
   const productsCount = useProductsStore((state) => state.products.length);
   const { accounts, selectedAccountId, setModalOpen: setSocialModalOpen } = useSocialStore();
   const activeFacebookPage =
@@ -90,22 +98,45 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     setIsDropdownOpen(false);
   };
 
-  return (
-    <aside className="w-60 border-r border-[var(--border-subtle)] bg-[var(--bg-sidebar)] flex flex-col justify-between p-3 shrink-0 transition-colors z-20 select-none">
+  React.useEffect(() => {
+    if (!isMobileOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseMobile?.();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileOpen, onCloseMobile]);
+
+  const renderSidebarBody = (isMobile: boolean) => (
+    <>
       <div className="space-y-3.5">
         {/* 1. Brand Logo Header */}
-        <div className="flex items-center gap-2.5 px-2 pt-1">
-          <div className="w-7 h-7 rounded-md bg-[var(--brand-primary)] text-[var(--brand-primary-fg)] flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
-            <Command className="w-3.5 h-3.5" />
+        <div className="flex items-center justify-between px-2 pt-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-md bg-[var(--brand-primary)] text-[var(--brand-primary-fg)] flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+              <Command className="w-3.5 h-3.5" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-sm tracking-tight text-[var(--text-primary)]">
+                PostMind
+              </span>
+              <span className="text-[10px] font-mono px-1 py-0.2 rounded border border-[var(--border-subtle)] text-[var(--text-secondary)]">
+                AI
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-sm tracking-tight text-[var(--text-primary)]">
-              PostMind
-            </span>
-            <span className="text-[10px] font-mono px-1 py-0.2 rounded border border-[var(--border-subtle)] text-[var(--text-secondary)]">
-              AI
-            </span>
-          </div>
+          {isMobile && (
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+              aria-label="Close navigation drawer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* 2. Store Selector with Dropdown */}
@@ -356,7 +387,10 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
               <Link
                 key={item.id}
                 href={item.href}
-                onClick={() => setActiveTab?.(item.id)}
+                onClick={() => {
+                  setActiveTab?.(item.id);
+                  onCloseMobile?.();
+                }}
                 className={cn(
                   'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer text-left',
                   isActive
@@ -402,14 +436,20 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           <div className="flex items-center justify-between text-[11px] px-1">
             <span className="text-[var(--text-secondary)] font-medium">Facebook Channel</span>
             <button
-              onClick={() => setSocialModalOpen(true)}
+              onClick={() => {
+                setSocialModalOpen(true);
+                onCloseMobile?.();
+              }}
               className="text-[10px] text-[var(--brand-primary)] hover:underline cursor-pointer font-medium"
             >
               Manage
             </button>
           </div>
           <button
-            onClick={() => setSocialModalOpen(true)}
+            onClick={() => {
+              setSocialModalOpen(true);
+              onCloseMobile?.();
+            }}
             className="w-full flex items-center justify-between p-1.5 rounded-md bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)]/80 transition-colors cursor-pointer text-left group"
           >
             <div className="flex items-center gap-2 min-w-0">
@@ -440,6 +480,36 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           </div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar (md+) */}
+      <aside className="hidden md:flex w-60 border-r border-[var(--border-subtle)] bg-[var(--bg-sidebar)] flex-col justify-between p-3 shrink-0 transition-colors z-20 select-none">
+        {renderSidebarBody(false)}
+      </aside>
+
+      {/* Mobile Slide-Over Drawer (< md) */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-50 md:hidden flex"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation drawer"
+        >
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in-0 duration-200"
+            onClick={onCloseMobile}
+            aria-hidden="true"
+          />
+          {/* Drawer container */}
+          <aside className="relative w-64 max-w-[85vw] h-full bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] flex flex-col justify-between p-3 shrink-0 shadow-2xl z-10 animate-in slide-in-from-left duration-200 select-none">
+            {renderSidebarBody(true)}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

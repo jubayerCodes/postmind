@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { X, Loader2, Sparkles, AlertCircle, UploadCloud, Check } from 'lucide-react';
-import { useProductsStore, Product } from '@/stores/products-store';
+import { useProductsStore } from '@/stores/products-store';
 import { useStores } from '@/hooks/use-stores';
 import { ImagePickerTabs } from './image-picker-tabs';
 import { apiClient } from '@/lib/api-client';
@@ -96,6 +96,18 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
     }
     setError(null);
   }, [editingProduct, modalMode, isModalOpen]);
+
+  // Close modal on Escape key press
+  React.useEffect(() => {
+    if (!isModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen, closeModal]);
 
   if (!isModalOpen) return null;
 
@@ -235,8 +247,20 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
     }
   };
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      closeModal();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-0 duration-150">
+    <div
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-0 duration-150"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="product-modal-title"
+    >
       <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-2xl overflow-hidden select-none">
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-card)]">
@@ -245,7 +269,7 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
               <Sparkles className="w-3.5 h-3.5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[var(--text-primary)]">
+              <h2 id="product-modal-title" className="text-sm font-bold text-[var(--text-primary)]">
                 {modalMode === 'create' ? 'Add New Product' : 'Edit Product'}
               </h2>
               <p className="text-[11px] text-[var(--text-secondary)]">
@@ -275,6 +299,7 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
 
             <button
               onClick={closeModal}
+              aria-label="Close dialog"
               className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -389,10 +414,11 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
           {/* Row 1: Name and Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
+              <label htmlFor="product-name" className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Product Name <span className="text-rose-500">*</span>
               </label>
               <input
+                id="product-name"
                 type="text"
                 required
                 placeholder="e.g. Slim-Fit Stretch Denim"
@@ -403,10 +429,11 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
+              <label htmlFor="product-category" className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Category
               </label>
               <select
+                id="product-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-3 py-1.5 text-xs rounded-md border border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)]"
@@ -426,10 +453,11 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
           {/* Row 2: Price and Stock and Discount */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
+              <label htmlFor="product-price" className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Price ({activeStore?.currency || 'BDT'}) <span className="text-rose-500">*</span>
               </label>
               <input
+                id="product-price"
                 type="number"
                 step="0.01"
                 min="0"
@@ -442,10 +470,11 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
+              <label htmlFor="product-stock" className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Stock Quantity
               </label>
               <input
+                id="product-stock"
                 type="number"
                 min="0"
                 placeholder="e.g. 50"
@@ -456,10 +485,11 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
+              <label htmlFor="product-discount" className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Offer / Discount
               </label>
               <input
+                id="product-discount"
                 type="text"
                 placeholder="e.g. 20% OFF or BOGO"
                 value={discount}
@@ -471,10 +501,11 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
 
           {/* Row 3: Tagline */}
           <div>
-            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
+            <label htmlFor="product-tagline" className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
               Tagline / Selling Angle
             </label>
             <input
+              id="product-tagline"
               type="text"
               placeholder="e.g. Handcrafted Japanese selvedge denim tailored for modern gentlemen"
               value={tagline}
@@ -488,10 +519,11 @@ export function ProductModal({ onSwitchToBulk }: ProductModalProps) {
 
           {/* Row 4: Key Features */}
           <div>
-            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
+            <label htmlFor="product-features" className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
               Key Features (comma-separated)
             </label>
             <input
+              id="product-features"
               type="text"
               placeholder="100% Pure Cotton, Pre-shrunk weave, Double-stitch durability"
               value={featuresInput}

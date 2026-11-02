@@ -10,6 +10,7 @@
     --bg-main: #F0F2F5;
     --bg-card: #FFFFFF;
     --bg-card-hover: #E4E6EB;
+    --bg-hover: #E4E6EB;
     --bg-sidebar: #FFFFFF;
     --border-subtle: #E4E6EB;
     --border-active: #CED0D4;
@@ -27,6 +28,7 @@
     --bg-main: #18191A;
     --bg-card: #242526;
     --bg-card-hover: #3A3B3C;
+    --bg-hover: #3A3B3C;
     --bg-sidebar: #242526;
     --border-subtle: #393A3B;
     --border-active: #4E4F50;
@@ -46,6 +48,7 @@
     --bg-main: #FAFAFA;
     --bg-card: #FFFFFF;
     --bg-card-hover: #F2F2F2;
+    --bg-hover: #F2F2F2;
     --bg-sidebar: #FFFFFF;
     --border-subtle: #DBDBDB;
     --border-active: #C7C7C7;
@@ -65,6 +68,7 @@
     --bg-main: #000000;
     --bg-card: #121212;
     --bg-card-hover: #1F1F1F;
+    --bg-hover: #1F1F1F;
     --bg-sidebar: #121212;
     --border-subtle: #262626;
     --border-active: #363636;
@@ -84,6 +88,7 @@
     --bg-main: #F0F4F2;
     --bg-card: #FFFFFF;
     --bg-card-hover: #E9EDEF;
+    --bg-hover: #E9EDEF;
     --bg-sidebar: #FFFFFF;
     --border-subtle: #E9EDEF;
     --border-active: #D1D7DB;
@@ -103,6 +108,7 @@
     --bg-main: #0C1317;
     --bg-card: #202C33;
     --bg-card-hover: #2A3942;
+    --bg-hover: #2A3942;
     --bg-sidebar: #111B21;
     --border-subtle: #222E35;
     --border-active: #374248;
@@ -185,10 +191,10 @@ body {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.04) 50%,
     transparent 100%
   );
-  animation: shimmer-sweep 2s ease-in-out infinite;
+  animation: shimmer-sweep 2.2s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -196,7 +202,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(0, 0, 0, 0.05) 50%,
+    rgba(0, 0, 0, 0.04) 50%,
     transparent 100%
   );
 }

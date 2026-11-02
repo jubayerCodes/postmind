@@ -243,29 +243,24 @@ export function PostDraftsRail({
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] select-none space-y-2"
+                className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] select-none space-y-2.5"
               >
-                {/* Top Row: Status badge pill & date */}
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <div className="h-4 w-24 rounded bg-emerald-500/10 border border-emerald-500/20 skeleton-shimmer" />
-                  <div className="h-2.5 w-10 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
+                {/* Top Row: Status pill & date */}
+                <div className="flex items-center justify-between gap-1">
+                  <div className="h-3.5 w-16 rounded bg-[var(--bg-card-hover)]/60 skeleton-shimmer" />
+                  <div className="h-2.5 w-8 rounded bg-[var(--bg-card-hover)]/40 skeleton-shimmer" />
                 </div>
 
-                {/* Headline & Caption snippet */}
-                <div className="space-y-1">
-                  <div className="h-3.5 w-11/12 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
-                  <div className="h-3.5 w-3/4 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
-                  <div className="h-2.5 w-full rounded bg-[var(--bg-hover)]/70 skeleton-shimmer mt-1" />
-                  <div className="h-2.5 w-4/5 rounded bg-[var(--bg-hover)]/70 skeleton-shimmer" />
+                {/* Headline & Caption summary */}
+                <div className="space-y-1.5">
+                  <div className="h-3 w-10/12 rounded bg-[var(--bg-card-hover)]/70 skeleton-shimmer" />
+                  <div className="h-2.5 w-4/5 rounded bg-[var(--bg-card-hover)]/50 skeleton-shimmer" />
                 </div>
 
-                {/* Attached Products Row */}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border-subtle)]/40 text-[10px]">
-                  <div className="flex items-center gap-1.5">
-                    <ShoppingBag className="w-3 h-3 text-[var(--brand-primary)]/40 shrink-0" />
-                    <div className="h-2.5 w-28 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
-                  </div>
-                  <div className="h-3.5 w-12 rounded bg-[var(--bg-hover)] skeleton-shimmer" />
+                {/* Metadata strip */}
+                <div className="pt-1.5 border-t border-[var(--border-subtle)]/40 flex items-center justify-between">
+                  <div className="h-2 w-24 rounded bg-[var(--bg-card-hover)]/40 skeleton-shimmer" />
+                  <div className="h-2 w-8 rounded bg-[var(--bg-card-hover)]/40 skeleton-shimmer" />
                 </div>
               </div>
             ))}
