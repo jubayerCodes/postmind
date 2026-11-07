@@ -1,30 +1,11 @@
 import { supabase } from './supabase';
 
 function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    const envUrl = process.env.NEXT_PUBLIC_API_URL;
-    // If explicitly configured with a relative proxy path (e.g. /api/backend)
-    if (envUrl && envUrl.startsWith('/')) {
-      return envUrl;
-    }
-    // When accessed through ngrok, tunnels, or external hostnames, avoid direct calls to localhost from browser
-    const isRemote =
-      window.location.hostname !== 'localhost' &&
-      window.location.hostname !== '127.0.0.1';
-    if (isRemote || !envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
-      return '/api/backend';
-    }
-    return envUrl;
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '');
   }
-
-  // Server-side (SSR) requires an absolute URL for fetch()
-  return (
-    process.env.BACKEND_INTERNAL_URL ||
-    process.env.INTERNAL_API_URL ||
-    (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.startsWith('/')
-      ? process.env.NEXT_PUBLIC_API_URL
-      : 'http://localhost:5000')
-  );
+  return 'http://localhost:5000';
 }
 
 interface RequestOptions extends RequestInit {

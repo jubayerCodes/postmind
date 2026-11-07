@@ -41,7 +41,6 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV BACKEND_INTERNAL_URL="http://backend:5000"
 
 # Run as non-root user for security
 RUN addgroup --system --gid 1001 nodejs

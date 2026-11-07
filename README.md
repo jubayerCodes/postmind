@@ -233,8 +233,7 @@ cp .env.example .env.local
 
 | Variable | Required | Default / Example | Description |
 | :--- | :---: | :--- | :--- |
-| `NEXT_PUBLIC_API_URL` | **Yes** | `/api/backend` | Relative path for Next.js proxy route or direct backend URL |
-| `BACKEND_INTERNAL_URL` | **Yes** | `http://localhost:5000` | Target URL used by the server-side proxy route to reach NestJS |
+| `NEXT_PUBLIC_API_URL` | **Yes** | `http://localhost:5000` | Direct backend API URL (e.g. `https://postmind.onrender.com` in production) |
 | `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | `https://xyz.supabase.co` | Supabase project URL for client-side authentication |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | `eyJhbGci...` | Supabase public anonymous key |
 

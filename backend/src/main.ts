@@ -9,7 +9,12 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+  const frontendUrls = (
+    configService.get<string>('FRONTEND_URL', 'http://localhost:3000') || ''
+  )
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean);
   const port = configService.get<number>('PORT', 4000);
 
   // Allow up to 50MB for high-res base64 images and large product documents
@@ -18,9 +23,10 @@ async function bootstrap(): Promise<void> {
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   const allowedOrigins: (string | RegExp)[] = [
-    frontendUrl,
+    ...frontendUrls,
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    /https?:\/\/.*\.vercel\.app/,
   ];
 
   if (configService.get<string>('NODE_ENV') !== 'production') {
